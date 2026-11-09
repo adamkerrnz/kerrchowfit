@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 794 1123" preserveAspectRatio="xMidYMid slice">
+<defs>
+<linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#07060F"/><stop offset=".5" stop-color="#100B20"/><stop offset="1" stop-color="#1B0F2A"/></linearGradient>
+<linearGradient id="beamM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF3EA5" stop-opacity=".55"/><stop offset=".5" stop-color="#FF3EA5" stop-opacity=".12"/><stop offset="1" stop-color="#FF3EA5" stop-opacity="0"/></linearGradient>
+<linearGradient id="beamC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22D3EE" stop-opacity=".48"/><stop offset=".5" stop-color="#22D3EE" stop-opacity=".1"/><stop offset="1" stop-color="#22D3EE" stop-opacity="0"/></linearGradient>
+<linearGradient id="beamO" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF8A3D" stop-opacity=".5"/><stop offset=".5" stop-color="#FF8A3D" stop-opacity=".1"/><stop offset="1" stop-color="#FF8A3D" stop-opacity="0"/></linearGradient>
+<linearGradient id="floorWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A1A1F"/><stop offset="1" stop-color="#0D0810"/></linearGradient>
+<radialGradient id="poolO" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FF8A3D" stop-opacity=".7"/><stop offset="1" stop-color="#FF8A3D" stop-opacity="0"/></radialGradient>
+<radialGradient id="poolM" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FF3EA5" stop-opacity=".65"/><stop offset="1" stop-color="#FF3EA5" stop-opacity="0"/></radialGradient>
+<radialGradient id="poolC" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#22D3EE" stop-opacity=".55"/><stop offset="1" stop-color="#22D3EE" stop-opacity="0"/></radialGradient>
+<radialGradient id="hazeM" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FF3EA5" stop-opacity=".3"/><stop offset="1" stop-color="#FF3EA5" stop-opacity="0"/></radialGradient>
+<radialGradient id="bokM" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FF5FB5" stop-opacity=".22"/><stop offset=".8" stop-color="#FF5FB5" stop-opacity=".34"/><stop offset="1" stop-color="#FF5FB5" stop-opacity="0"/></radialGradient>
+<radialGradient id="bokC" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#4FDDF2" stop-opacity=".18"/><stop offset=".8" stop-color="#4FDDF2" stop-opacity=".3"/><stop offset="1" stop-color="#4FDDF2" stop-opacity="0"/></radialGradient>
+<radialGradient id="bokO" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFA35C" stop-opacity=".2"/><stop offset=".8" stop-color="#FFA35C" stop-opacity=".32"/><stop offset="1" stop-color="#FFA35C" stop-opacity="0"/></radialGradient>
+<radialGradient id="vig" cx=".5" cy=".45" r=".75"><stop offset="0" stop-color="#000000" stop-opacity="0"/><stop offset=".65" stop-color="#000000" stop-opacity="0"/><stop offset="1" stop-color="#000000" stop-opacity=".6"/></radialGradient>
+<clipPath id="floorClip"><rect x="0" y="1034" width="794" height="89"/></clipPath>
+<g id="bike" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="84" cy="41" r="13" fill="currentColor"/>
+<path d="M22 56 H100"/>
+<path d="M30 56 L34 47 L84 41"/>
+<path d="M34 47 L29 13"/>
+<path d="M20 12 Q30 8 40 12" stroke-width="6"/>
+<path d="M84 41 L79 13"/>
+<path d="M70 9 H92 Q96 9 96 14"/>
+<circle cx="56" cy="45" r="4.5" fill="currentColor"/>
+<path d="M56 45 L48 56 M56 45 L63 36" stroke-width="3"/>
+</g>
+<g id="rider" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+<path d="M31 7 L60 -7" stroke-width="9"/>
+<circle cx="69" cy="-15" r="6.5" fill="currentColor" stroke="none"/>
+<path d="M58 -5 L72 4 L84 9" stroke-width="4"/>
+<path d="M31 8 L52 26 L58 42" stroke-width="7"/>
+<path d="M31 8 L48 30 L48 44" stroke-width="6" opacity=".9"/>
+</g>
+</defs>
+<rect x="0" y="0" width="794" height="1123" fill="url(#bgGrad)"/>
+<ellipse cx="400" cy="0" rx="430" ry="170" fill="url(#hazeM)"/>
+<circle cx="30" cy="150" r="26" fill="url(#bokM)"/>
+<circle cx="742" cy="118" r="34" fill="url(#bokC)"/>
+<circle cx="764" cy="300" r="22" fill="url(#bokO)"/>
+<circle cx="16" cy="430" r="30" fill="url(#bokC)"/>
+<circle cx="772" cy="520" r="26" fill="url(#bokM)"/>
+<circle cx="22" cy="700" r="24" fill="url(#bokO)"/>
+<circle cx="768" cy="770" r="32" fill="url(#bokC)"/>
+<circle cx="28" cy="900" r="28" fill="url(#bokM)"/>
+<circle cx="764" cy="960" r="26" fill="url(#bokO)"/>
+<polygon points="78,8 102,8 240,780 -60,780" fill="url(#beamM)"/>
+<polygon points="278,8 302,8 520,780 120,780" fill="url(#beamC)"/>
+<polygon points="488,8 512,8 700,780 260,780" fill="url(#beamO)"/>
+<polygon points="688,8 712,8 900,780 520,780" fill="url(#beamM)"/>
+<polygon points="392,8 408,8 300,700 560,700" fill="url(#beamC)" opacity=".5"/>
+<rect x="0" y="0" width="794" height="8" fill="#17142A"/>
+<path d="M0 8 H794" stroke="#FFFFFF" stroke-opacity=".12" stroke-width="1"/>
+<rect x="80" y="2" width="20" height="12" rx="3" fill="#25223A"/><circle cx="90" cy="15" r="5" fill="#FFC2E3"/><circle cx="90" cy="15" r="11" fill="url(#bokM)"/>
+<rect x="280" y="2" width="20" height="12" rx="3" fill="#25223A"/><circle cx="290" cy="15" r="5" fill="#B5F4FF"/><circle cx="290" cy="15" r="11" fill="url(#bokC)"/>
+<rect x="490" y="2" width="20" height="12" rx="3" fill="#25223A"/><circle cx="500" cy="15" r="5" fill="#FFD9B8"/><circle cx="500" cy="15" r="11" fill="url(#bokO)"/>
+<rect x="690" y="2" width="20" height="12" rx="3" fill="#25223A"/><circle cx="700" cy="15" r="5" fill="#FFC2E3"/><circle cx="700" cy="15" r="11" fill="url(#bokM)"/>
+<rect x="0" y="1034" width="794" height="89" fill="url(#floorWood)"/>
+<g clip-path="url(#floorClip)" stroke="#FFFFFF" stroke-opacity=".07" stroke-width="1">
+<path d="M397 930 L-300 1123"/><path d="M397 930 L-230 1123"/><path d="M397 930 L-160 1123"/><path d="M397 930 L-90 1123"/><path d="M397 930 L-20 1123"/><path d="M397 930 L50 1123"/><path d="M397 930 L120 1123"/><path d="M397 930 L190 1123"/><path d="M397 930 L260 1123"/><path d="M397 930 L330 1123"/><path d="M397 930 L400 1123"/><path d="M397 930 L470 1123"/><path d="M397 930 L540 1123"/><path d="M397 930 L610 1123"/><path d="M397 930 L680 1123"/><path d="M397 930 L750 1123"/><path d="M397 930 L820 1123"/><path d="M397 930 L890 1123"/><path d="M397 930 L960 1123"/><path d="M397 930 L1030 1123"/><path d="M397 930 L1100 1123"/>
+<path d="M0 1052 H794"/><path d="M0 1074 H794"/><path d="M0 1100 H794"/>
+</g>
+<ellipse cx="130" cy="1092" rx="170" ry="24" fill="url(#poolO)"/>
+<ellipse cx="400" cy="1098" rx="200" ry="22" fill="url(#poolM)"/>
+<ellipse cx="670" cy="1092" rx="170" ry="24" fill="url(#poolC)"/>
+<path d="M0 1034 H794" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="1.5"/>
+<g color="#0C0816">
+<g transform="translate(14 1033) scale(.5)"><use href="#bike"/><use href="#rider"/></g>
+<g transform="translate(122 1033) scale(.5)"><use href="#bike"/></g>
+<g transform="translate(230 1033) scale(.5)"><use href="#bike"/><use href="#rider"/></g>
+<g transform="translate(338 1033) scale(.5)"><use href="#bike"/><use href="#rider"/></g>
+<g transform="translate(446 1033) scale(.5)"><use href="#bike"/></g>
+<g transform="translate(554 1033) scale(.5)"><use href="#bike"/><use href="#rider"/></g>
+<g transform="translate(662 1033) scale(.5)"><use href="#bike"/><use href="#rider"/></g>
+</g>
+<g transform="translate(40 1078) scale(.78)">
+<g color="#FF5FB5" opacity=".55" transform="translate(-1.6 -1.6)"><use href="#bike"/><use href="#rider"/></g>
+<g color="#040309"><use href="#bike"/><use href="#rider"/></g>
+</g>
+<g transform="translate(190 1078) scale(.78)">
+<g color="#4FDDF2" opacity=".5" transform="translate(-1.6 -1.6)"><use href="#bike"/></g>
+<g color="#040309"><use href="#bike"/></g>
+</g>
+<g transform="translate(340 1078) scale(.78)">
+<g color="#FF5FB5" opacity=".55" transform="translate(-1.6 -1.6)"><use href="#bike"/><use href="#rider"/></g>
+<g color="#040309"><use href="#bike"/><use href="#rider"/></g>
+</g>
+<g transform="translate(490 1078) scale(.78)">
+<g color="#FFA35C" opacity=".55" transform="translate(-1.6 -1.6)"><use href="#bike"/><use href="#rider"/></g>
+<g color="#040309"><use href="#bike"/><use href="#rider"/></g>
+</g>
+<g transform="translate(640 1078) scale(.78)">
+<g color="#4FDDF2" opacity=".5" transform="translate(-1.6 -1.6)"><use href="#bike"/><use href="#rider"/></g>
+<g color="#040309"><use href="#bike"/><use href="#rider"/></g>
+</g>
+<rect x="0" y="0" width="794" height="1123" fill="url(#vig)"/>
+</svg>
