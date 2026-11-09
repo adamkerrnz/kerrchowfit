@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>KerrChow Fit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&family=Titillium+Web:wght@600;700;900&display=swap" rel="stylesheet">
@@ -552,6 +553,39 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 .st-act-link { color: var(--soft); }
 .st-act-link:hover { background: #2B2F34; color: #fff; }
 .st-empty { color: var(--soft); }
+
+/* ---------- Garmin ---------- */
+.gm-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.gm-bar .status { flex: 1; min-width: 0; }
+.gm-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 99px; background: #2B2F34; color: var(--soft); font-size: 12px; font-weight: 700; }
+.gm-chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--gm-dot, #9AA0A8); }
+.gm-chip.is-live { --gm-dot: var(--done); color: #fff; }
+.gm-chip.is-old { --gm-dot: var(--accent); }
+.gm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 640px) { .gm-grid { grid-template-columns: minmax(0, 1fr); } }
+.gm-say { margin: 0; font-size: 14px; line-height: 1.45; color: var(--legend); }
+.gm-say strong { color: #fff; }
+.gm-rows { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.gm-row { display: grid; grid-template-columns: minmax(96px, 9.5em) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
+.gm-row-label { color: var(--legend); font-weight: 600; }
+.gm-row-val { color: var(--soft); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.gm-track { position: relative; height: 10px; border-radius: 4px; background: #2B2F34; overflow: hidden; }
+.gm-fill { position: absolute; inset: 0 auto 0 0; border-radius: 0 4px 4px 0; background: var(--gm-c, #9AA0A8); }
+.gm-band { position: absolute; top: 0; bottom: 0; background: rgba(255, 255, 255, .13); border-inline: 1px dashed rgba(255, 255, 255, .45); }
+.gm-pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 11px; font-weight: 700; background: #2B2F34; color: var(--soft); }
+.gm-pill.is-good { background: #173D2A; color: #7FE0AE; }
+.gm-pill.is-warn { background: #4A2C0C; color: #FFB46B; }
+.gm-pill.is-bad { background: #4A1A1C; color: #FF9A9D; }
+.gm-kv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.gm-kv > div { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: 8px; background: rgba(255, 255, 255, .04); border: 1px solid #33373D; min-width: 0; }
+.gm-kv span { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); }
+.gm-kv strong { font-family: var(--font-display); font-size: 26px; font-weight: 800; line-height: 1.05; color: #fff; font-variant-numeric: tabular-nums; }
+.gm-kv small { font-size: 12px; color: var(--soft); }
+.gm-sub { margin: 4px 0 0; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--papaya); }
+.gm-missing { margin: 0; font-size: 13px; color: var(--soft); font-style: italic; }
+.st-tile-value small { margin-left: 3px; font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--soft); }
+.gm-spark { display: block; margin-top: 2px; }
+.gm-score { font: 700 11px var(--font-body); fill: var(--legend); font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -581,6 +615,48 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 <div class="statusline"><div class="status" id="status" role="status"></div><label class="startline" for="plan-start">Plan start <input type="date" id="plan-start"></label></div>
 <div class="wx-bar"><span class="status" id="wx-status" role="status"></span><span class="wx-actions"><button type="button" class="st-btn st-btn--primary" id="wx-allow" hidden>Show weather</button><button type="button" class="st-btn" id="wx-manage" hidden>Open permissions</button></span></div>
 <ol class="days" id="days"></ol>
+<section class="strava garmin" id="garmin" aria-labelledby="gm-title">
+<div class="st-head">
+<div>
+<div class="eyebrow">GARMIN</div>
+<h2 class="display st-title" id="gm-title">Body &amp; readiness</h2>
+</div>
+<div class="st-actions">
+<button type="button" class="st-btn st-btn--primary" id="gm-live" hidden>Get live data</button>
+<button type="button" class="st-btn" id="gm-refresh" hidden>Refresh</button>
+</div>
+</div>
+<div class="gm-bar"><span class="gm-chip" id="gm-source" hidden></span><span class="status" id="gm-status" role="status">Loading Garmin data…</span></div>
+<div class="st-body" id="gm-body" hidden>
+<div class="st-tiles" id="gm-tiles"></div>
+<div class="gm-grid">
+<div class="st-card" id="gm-ready-card"><div class="st-card-head"><h3>Readiness</h3><span class="gm-pill" id="gm-ready-pill"></span></div><div id="gm-ready"></div></div>
+<div class="st-card" id="gm-status-card"><div class="st-card-head"><h3>Training status</h3><span class="gm-pill" id="gm-status-pill"></span></div><div id="gm-train"></div></div>
+</div>
+<div class="st-card" id="gm-sleep-card">
+<div class="st-card-head"><h3>Sleep · last 7 nights</h3></div>
+<div class="st-legend">
+<span class="legend-item"><span class="swatch" style="background:#5F86E8"></span>Deep</span>
+<span class="legend-item"><span class="swatch" style="background:#20A491"></span>Light</span>
+<span class="legend-item"><span class="swatch" style="background:#E8681F"></span>REM</span>
+<span class="legend-item"><span class="swatch" style="background:#6B7178"></span>Awake</span>
+</div>
+<div class="st-chart" id="gm-sleep-chart"><div class="st-tip" id="gm-tip" hidden></div></div>
+<p class="st-note" id="gm-sleep-note"></p>
+<details class="st-details">
+<summary>Show as table</summary>
+<div class="st-table-wrap"><table id="gm-sleep-table">
+<thead><tr><th scope="col">Woke</th><th scope="col">Score</th><th scope="col">Asleep</th><th scope="col">Deep</th><th scope="col">Light</th><th scope="col">REM</th><th scope="col">Awake</th><th scope="col">HRV</th></tr></thead>
+<tbody></tbody>
+</table></div>
+</details>
+</div>
+<div class="gm-grid">
+<div class="st-card" id="gm-focus-card"><div class="st-card-head"><h3>Load focus · 4 weeks</h3><span class="gm-pill" id="gm-focus-pill"></span></div><div id="gm-focus"></div></div>
+<div class="st-card" id="gm-day-card"><div class="st-card-head"><h3>Today &amp; this week</h3></div><div id="gm-day"></div></div>
+</div>
+</div>
+</section>
 <section class="strava" id="strava" aria-labelledby="st-title">
 <div class="st-head">
 <div>
@@ -2120,6 +2196,440 @@ window.FIGURES = (function () {
     else if (st === "unavailable") setStatus("Weather isn't available in this view.", false);
     else if (st === "denied") setStatus("AccuWeather access was declined for this page. Allow it from the page's Permissions menu.", true);
     else setStatus("See rain and wind for each day from AccuWeather. Claude will ask you to allow this page to read it.", true);
+  })();
+})();
+</script>
+<script>
+(function () {
+  // Garmin: live from the local Garmin Connect MCP server (Claude desktop app on the PC that runs it),
+  // otherwise the last snapshot saved with the page (garmin/latest), refreshed each morning by a scheduled Claude task.
+  const HOST = "host:Garmin_Connect";
+  const DOC = "garmin/latest";
+  const CACHE = { staleTime: 10 * 60 * 1000, gcTime: 24 * 60 * 60 * 1000 };
+  // Validated categorical order on the dark card surface; awake is a neutral off-state.
+  const STAGES = [
+    { key: "deep", label: "Deep", color: "#5F86E8" },
+    { key: "light", label: "Light", color: "#20A491" },
+    { key: "rem", label: "REM", color: "#E8681F" },
+    { key: "awake", label: "Awake", color: "#6B7178" },
+  ];
+  const GOOD = "#2BB673", MID = "#FF8A1F", LOW = "#E5484D";
+
+  const $ = (id) => document.getElementById(id);
+  function h(tag, attrs, ...children) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === "style") Object.entries(v).forEach(([p, val]) => p.startsWith("--") ? el.style.setProperty(p, val) : (el.style[p] = val));
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of children.flat()) if (c != null && c !== false) el.append(c instanceof Node ? c : document.createTextNode(c));
+    return el;
+  }
+  const svgEl = (tag, attrs, text) => {
+    const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+    if (text != null) el.textContent = text;
+    return el;
+  };
+
+  // ---------- formatting ----------
+  const pad = (n) => String(n).padStart(2, "0");
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const fromYmd = (s) => { const [y, m, d] = String(s).slice(0, 10).split("-").map(Number); return new Date(y, m - 1, d); };
+  const hm = (sec) => { if (sec == null) return "–"; const m = Math.round(sec / 60); return `${Math.floor(m / 60)}h ${pad(m % 60)}m`; };
+  const num = (v, d = 0) => (v == null || isNaN(v) ? "–" : Number(v).toFixed(d));
+  const words = (s) => { if (!s) return ""; const t = String(s).replace(/_\d+$/, "").toLowerCase().replace(/_/g, " "); return t.charAt(0).toUpperCase() + t.slice(1); };
+  const PHRASES = {
+    AEROBIC_LOW_SHORTAGE: "Short on low aerobic", AEROBIC_HIGH_SHORTAGE: "Short on high aerobic", ANAEROBIC_SHORTAGE: "Short on anaerobic",
+    AEROBIC_LOW_FOCUS: "Low aerobic focus", AEROBIC_HIGH_FOCUS: "High aerobic focus", ANAEROBIC_FOCUS: "Anaerobic focus", BALANCED: "Balanced",
+  };
+  const phrase = (s) => PHRASES[s] || words(s);
+  const fmtTime = (d) => d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  function fmtWhen(ms) {
+    const d = new Date(ms), now = new Date();
+    if (ymd(d) === ymd(now)) return `today ${fmtTime(d)}`;
+    if (ymd(d) === ymd(addDays(now, -1))) return `yesterday ${fmtTime(d)}`;
+    return `${d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} ${fmtTime(d)}`;
+  }
+  const localTs = (s) => (s ? new Date(String(s).replace(" ", "T")) : null); // Garmin local timestamps carry no zone
+  const dayShort = (s) => fromYmd(s).toLocaleDateString(undefined, { weekday: "short" });
+  const dayLong = (s) => fromYmd(s).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  const pctColor = (p) => (p >= 67 ? GOOD : p >= 34 ? MID : LOW);
+  const levelClass = (l) => ({ PRIME: "is-good", HIGH: "is-good", MODERATE: "is-warn", LOW: "is-bad", POOR: "is-bad" }[l] || "");
+  const acwrClass = (s) => ({ OPTIMAL: "is-good", HIGH: "is-warn", VERY_HIGH: "is-bad" }[s] || "");
+
+  // ---------- what to fetch ----------
+  function plan(date) {
+    const t = fromYmd(date);
+    return {
+      summary: ["get_user_summary", { date }],
+      readiness: ["get_training_readiness", { date }],
+      hrv: ["get_hrv_data", { date }],
+      sleep: ["get_sleep_summary_range", { start_date: ymd(addDays(t, -6)), end_date: date }],
+      status: ["get_training_status", { date }],
+      focus: ["get_training_load_balance", { date }],
+      vo2: ["get_vo2max_trend", { start_date: ymd(addDays(t, -55)), end_date: date }],
+      im: ["get_weekly_intensity_minutes", { end_date: date, weeks: 4 }],
+    };
+  }
+
+  // ---------- normalise raw tool payloads ----------
+  const obj = (v) => (v && typeof v === "object" ? v : null);
+  function normalise(raw) {
+    const S = {};
+    const sm = obj(raw.summary);
+    if (sm) S.day = {
+      steps: sm.totalSteps, stepGoal: sm.dailyStepGoal, rhr: sm.restingHeartRate, rhr7: sm.lastSevenDaysAvgRestingHeartRate,
+      stress: sm.averageStressLevel, bbNow: sm.bodyBatteryMostRecentValue, bbHigh: sm.bodyBatteryHighestValue,
+      bbLow: sm.bodyBatteryLowestValue, bbWake: sm.bodyBatteryAtWakeTime, imMod: sm.moderateIntensityMinutes, imVig: sm.vigorousIntensityMinutes,
+    };
+    const rd = Array.isArray(raw.readiness) ? raw.readiness : obj(raw.readiness) ? [raw.readiness] : [];
+    const byTime = rd.filter((x) => x && x.score != null).sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
+    if (byTime.length) {
+      const now = byTime[0], wake = byTime.find((x) => x.context === "AFTER_WAKEUP_RESET");
+      S.ready = {
+        score: now.score, level: now.level, feedback: now.feedback, at: now.timestamp, recovery: now.recovery_time_hours,
+        wake: wake && wake !== now ? wake.score : null,
+        factors: [
+          ["Sleep", now.sleep_factor_percent, now.sleep_factor_feedback],
+          ["Recovery time", now.recovery_factor_percent, now.recovery_factor_feedback],
+          ["HRV status", now.hrv_factor_percent, now.hrv_factor_feedback],
+          ["Acute load", now.training_load_factor_percent, now.training_load_feedback],
+          ["Sleep history", now.sleep_history_factor_percent, now.sleep_history_feedback],
+          ["Stress history", now.stress_history_factor_percent, now.stress_history_feedback],
+        ].filter((f) => f[1] != null),
+      };
+    }
+    const hv = obj(raw.hrv);
+    if (hv && hv.last_night_avg_hrv_ms != null) S.hrv = { last: hv.last_night_avg_hrv_ms, week: hv.weekly_avg_hrv_ms, low: hv.baseline_balanced_low_ms, high: hv.baseline_balanced_upper_ms, status: hv.status };
+    const nights = obj(raw.sleep) && raw.sleep.nights;
+    if (Array.isArray(nights)) S.sleep = nights.filter((n) => n && n.date).map((n) => ({
+      date: n.date, score: n.sleep_score, asleep: n.sleep_seconds, deep: n.deep_sleep_seconds || 0, light: n.light_sleep_seconds || 0,
+      rem: n.rem_sleep_seconds || 0, awake: n.awake_seconds || 0, hrv: n.avg_overnight_hrv, rhr: n.resting_heart_rate_bpm,
+    })).sort((a, b) => a.date.localeCompare(b.date)).slice(-7);
+    const st = obj(raw.status);
+    if (st && (st.training_status_feedback || st.acute_load != null)) S.status = {
+      feedback: st.training_status_feedback, acute: st.acute_load, chronic: st.chronic_load, ratio: st.load_ratio, acwr: st.acwr_status,
+      optMin: st.optimal_chronic_load_min, optMax: st.optimal_chronic_load_max,
+      vo2Run: st.vo2_max_precise ?? st.vo2_max, vo2Bike: st.cycling_vo2_max_precise ?? st.cycling_vo2_max, device: st.reporting_device_name,
+    };
+    const fc = obj(raw.focus);
+    if (fc && fc.aerobic_low) S.focus = {
+      feedback: fc.feedback,
+      bands: [["Low aerobic", fc.aerobic_low], ["High aerobic", fc.aerobic_high], ["Anaerobic", fc.anaerobic]]
+        .filter((b) => obj(b[1])).map(([label, b]) => ({ label, load: b.load, min: b.target_min, max: b.target_max, status: b.status })),
+    };
+    const vo = obj(raw.vo2);
+    if (vo && Array.isArray(vo.trend) && vo.trend.length) S.vo2 = {
+      sport: vo.sport, first: vo.first_vo2_max, latest: vo.latest_vo2_max, change: vo.change,
+      points: vo.trend.filter((p) => p && p.vo2_max != null).map((p) => ({ date: p.date, v: p.vo2_max, measured: !p.carried_forward })),
+    };
+    const im = obj(raw.im) && raw.im.weekly_data;
+    if (Array.isArray(im)) S.im = im.filter((w) => w && w.week_start).map((w) => ({ week: w.week_start, total: w.total_minutes || 0, mod: w.moderate_minutes || 0, vig: w.vigorous_minutes || 0, goal: w.weekly_goal || 150 }))
+      .sort((a, b) => a.week.localeCompare(b.week)).slice(-5);
+    return S;
+  }
+
+  // ---------- render ----------
+  let current = null; // { S, fetchedAt, source: "live" | "saved", date, savedBy }
+  const missing = (text) => h("p", { class: "gm-missing" }, text || "No data from Garmin for this yet.");
+  function tile(label, value, unit, sub) {
+    return h("div", { class: "st-tile" + (value == null ? " is-error" : "") },
+      h("span", { class: "st-tile-label" }, label),
+      h("strong", { class: "st-tile-value" }, value == null ? "–" : String(value), value != null && unit ? h("small", {}, unit) : null),
+      h("span", { class: "st-tile-sub" }, value == null ? "No data" : sub || ""));
+  }
+  function bar(pct, color, band) {
+    const track = h("div", { class: "gm-track" });
+    if (band) track.append(h("span", { class: "gm-band", style: { left: `${band[0]}%`, width: `${Math.max(0, band[1] - band[0])}%` } }));
+    track.append(h("span", { class: "gm-fill", style: { width: `${Math.max(0, Math.min(100, pct))}%`, "--gm-c": color } }));
+    return track;
+  }
+  const row = (label, track, val) => h("li", { class: "gm-row" }, h("span", { class: "gm-row-label" }, label), track, h("span", { class: "gm-row-val" }, val));
+
+  function renderTiles(S) {
+    const r = S.ready, v = S.hrv, d = S.day || {};
+    $("gm-tiles").replaceChildren(
+      tile("Readiness", r ? r.score : null, "/100", r ? `${words(r.level)}${r.recovery != null ? ` · ${num(r.recovery)} h recovery` : ""}` : ""),
+      tile("Overnight HRV", v ? v.last : null, "ms", v ? `${words(v.status)} · 7-day ${num(v.week)} ms` : ""),
+      tile("Resting HR", d.rhr ?? null, "bpm", d.rhr7 != null ? `7-day average ${d.rhr7}` : ""),
+      tile("Body battery", d.bbNow ?? null, "", d.bbWake != null ? `Woke at ${d.bbWake} · low ${num(d.bbLow)}` : ""),
+    );
+  }
+
+  function renderReady(S) {
+    const box = $("gm-ready"), pill = $("gm-ready-pill"), r = S.ready;
+    pill.textContent = r ? words(r.level) : ""; pill.className = "gm-pill " + (r ? levelClass(r.level) : "");
+    if (!r) { box.replaceChildren(missing("No training readiness from Garmin today.")); return; }
+    const at = localTs(r.at);
+    const say = h("p", { class: "gm-say" }, h("strong", {}, words(r.feedback) || "Readiness"), ". ",
+      r.recovery != null ? `${num(r.recovery)} h of recovery left` : "", at && !isNaN(at) ? ` as of ${fmtTime(at)}` : "", ".",
+      r.wake != null ? ` Score on waking: ${r.wake}.` : "");
+    const list = h("ul", { class: "gm-rows", "aria-label": "What's driving readiness" },
+      r.factors.map(([label, p, fb]) => row(label, bar(p, pctColor(p)), `${p}% · ${words(fb)}`)));
+    box.replaceChildren(say, h("p", { class: "gm-sub" }, "What's driving it"), list);
+  }
+
+  function spark(vo2, width) {
+    const pts = vo2.points;
+    const W = Math.max(160, width), H = 54, m = { l: 4, r: 4, t: 8, b: 8 };
+    const vals = pts.map((p) => p.v), lo = Math.min(...vals) - 0.3, hi = Math.max(...vals) + 0.3;
+    const x = (i) => m.l + (W - m.l - m.r) * (pts.length === 1 ? 0.5 : i / (pts.length - 1));
+    const y = (v) => m.t + (H - m.t - m.b) * (1 - (v - lo) / (hi - lo || 1));
+    const color = /cycl|bik/i.test(vo2.sport || "") ? "#E8681F" : "#20A491";
+    const svg = svgEl("svg", { class: "gm-spark", width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img",
+      "aria-label": `${words(vo2.sport) || "VO2"} VO2 max over 8 weeks, from ${num(vo2.first, 1)} to ${num(vo2.latest, 1)}` });
+    svg.append(svgEl("path", { d: pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(""), fill: "none", stroke: color, "stroke-width": 2, "stroke-linejoin": "round" }));
+    pts.forEach((p, i) => {
+      if (!p.measured && i !== pts.length - 1) return;
+      const c = svgEl("circle", { cx: x(i), cy: y(p.v), r: 4, fill: color, stroke: "#1F2124", "stroke-width": 2 });
+      c.append(svgEl("title", {}, `${dayLong(p.date)}: ${num(p.v, 1)}`));
+      svg.append(c);
+    });
+    return svg;
+  }
+
+  function renderTrain(S) {
+    const box = $("gm-train"), pill = $("gm-status-pill"), s = S.status;
+    pill.textContent = s && s.acwr ? `Load ${words(s.acwr).toLowerCase()}` : ""; pill.className = "gm-pill " + (s ? acwrClass(s.acwr) : "");
+    if (!s) { box.replaceChildren(missing("No training status from Garmin today.")); return; }
+    const parts = [
+      h("p", { class: "gm-say" }, h("strong", {}, words(s.feedback) || "Training status"),
+        s.ratio != null ? `. Acute load ${num(s.acute)} vs chronic ${num(s.chronic)}, a ratio of ${num(s.ratio, 1)}.` : "."),
+      h("div", { class: "gm-kv" },
+        h("div", {}, h("span", {}, "Acute load"), h("strong", {}, num(s.acute)), h("small", {}, "last 7 days")),
+        h("div", {}, h("span", {}, "Chronic"), h("strong", {}, num(s.chronic)), h("small", {}, s.optMin != null ? `aim ${num(s.optMin)}–${num(s.optMax)}` : "4-week")),
+        h("div", {}, h("span", {}, "Ratio"), h("strong", {}, num(s.ratio, 1)), h("small", {}, words(s.acwr) || "acute ÷ chronic"))),
+      h("p", { class: "gm-sub" }, "VO2 max"),
+      h("div", { class: "gm-kv" },
+        h("div", {}, h("span", {}, "Run"), h("strong", {}, num(s.vo2Run, 1)), h("small", {}, "ml/kg/min")),
+        h("div", {}, h("span", {}, "Bike"), h("strong", {}, num(s.vo2Bike, 1)), h("small", {}, "ml/kg/min")),
+        h("div", {}, h("span", {}, "8 weeks"), h("strong", {}, S.vo2 && S.vo2.change != null ? `${S.vo2.change > 0 ? "+" : ""}${num(S.vo2.change, 1)}` : "–"), h("small", {}, S.vo2 ? words(S.vo2.sport) : ""))),
+    ];
+    box.replaceChildren(...parts);
+    if (S.vo2 && S.vo2.points.length > 1) {
+      box.append(spark(S.vo2, box.clientWidth || 300),
+        h("p", { class: "st-note" }, `${words(S.vo2.sport)} VO2 max, last 8 weeks: ${num(S.vo2.first, 1)} → ${num(S.vo2.latest, 1)}. Dots mark days Garmin recalculated it.`));
+    }
+  }
+
+  function showTip(tip, wrap, cx, n) {
+    const rows = STAGES.map((sg) => h("div", { class: "st-tip-row" }, h("span", { class: "swatch", style: { background: sg.color } }), `${sg.label} ${hm(n[sg.key])}`));
+    tip.replaceChildren(h("strong", {}, `Woke ${dayLong(n.date)}`), ...rows,
+      h("div", { class: "st-tip-total" }, `Asleep ${hm(n.asleep)} · score ${n.score ?? "–"}${n.hrv != null ? ` · HRV ${n.hrv} ms` : ""}`));
+    tip.hidden = false;
+    const w = tip.offsetWidth || 170;
+    tip.style.left = `${Math.max(0, Math.min(wrap.clientWidth - w, cx - w / 2))}px`;
+    tip.style.top = "0px";
+  }
+
+  function renderSleep(S) {
+    const wrap = $("gm-sleep-chart"), tip = $("gm-tip"), note = $("gm-sleep-note"), tb = $("gm-sleep-table").tBodies[0];
+    wrap.querySelectorAll("svg").forEach((s) => s.remove());
+    tip.hidden = true; tb.textContent = "";
+    const N = S.sleep || [];
+    if (!N.length) { note.textContent = "No sleep data from Garmin for the last 7 nights."; return; }
+    const total = (n) => n.deep + n.light + n.rem + n.awake;
+    const W = Math.max(280, wrap.clientWidth || 600), H = 210, m = { l: 34, r: 6, t: 22, b: 26 };
+    const maxH = Math.max(8, Math.ceil(Math.max(...N.map(total)) / 3600 / 2) * 2);
+    const y = (sec) => m.t + (H - m.t - m.b) * (1 - sec / (maxH * 3600));
+    const band = (W - m.l - m.r) / N.length, bw = Math.min(40, band * 0.58);
+    const avgSleep = N.reduce((a, n) => a + (n.asleep || 0), 0) / N.length;
+    const scored = N.filter((n) => n.score != null), avgScore = scored.length ? Math.round(scored.reduce((a, n) => a + n.score, 0) / scored.length) : null;
+    const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img",
+      "aria-label": `Sleep by stage for the last ${N.length} nights; average ${hm(avgSleep)} asleep${avgScore != null ? `, average score ${avgScore}` : ""}. Table below.` });
+    for (let hh = 0; hh <= maxH; hh += 2) {
+      const yy = y(hh * 3600);
+      svg.append(svgEl("line", { x1: m.l, x2: W - m.r, y1: yy, y2: yy, class: hh ? "st-grid" : "st-base" }));
+      svg.append(svgEl("text", { x: m.l - 6, y: yy + 4, "text-anchor": "end", class: "st-axis" }, `${hh}h`));
+    }
+    N.forEach((n, i) => {
+      const cx = m.l + band * i + band / 2, x = cx - bw / 2;
+      let acc = 0;
+      for (const sg of STAGES) {
+        const v = n[sg.key];
+        if (!v) continue;
+        const y0 = y(acc), y1 = y(acc + v);
+        acc += v;
+        const hgt = y0 - y1 - 2;
+        if (hgt > 0) svg.append(svgEl("rect", { x, y: y1, width: bw, height: hgt, rx: 2, fill: sg.color }));
+      }
+      if (n.score != null) svg.append(svgEl("text", { x: cx, y: y(acc) - 7, "text-anchor": "middle", class: "gm-score" }, n.score));
+      svg.append(svgEl("text", { x: cx, y: H - 8, "text-anchor": "middle", class: "st-axis" }, dayShort(n.date)));
+      const hit = svgEl("rect", { x: m.l + band * i, y: m.t, width: band, height: H - m.t - m.b, class: "st-hit", tabindex: 0,
+        "aria-label": `Woke ${dayLong(n.date)}: asleep ${hm(n.asleep)}, score ${n.score ?? "none"}` });
+      const on = () => { hit.classList.add("is-on"); showTip(tip, wrap, cx, n); };
+      const off = () => { hit.classList.remove("is-on"); tip.hidden = true; };
+      hit.addEventListener("pointerenter", on); hit.addEventListener("pointerleave", off);
+      hit.addEventListener("focus", on); hit.addEventListener("blur", off);
+      svg.append(hit);
+      tb.append(h("tr", {}, h("th", { scope: "row" }, dayLong(n.date)), h("td", {}, n.score ?? "–"), h("td", {}, hm(n.asleep)),
+        h("td", {}, hm(n.deep)), h("td", {}, hm(n.light)), h("td", {}, hm(n.rem)), h("td", {}, hm(n.awake)), h("td", {}, n.hrv != null ? `${n.hrv} ms` : "–")));
+    });
+    wrap.prepend(svg);
+    note.textContent = `Bar height is time in bed by stage; the number on top is Garmin's sleep score. ${N.length}-night average: ${hm(avgSleep)} asleep${avgScore != null ? `, score ${avgScore}` : ""}.`;
+  }
+
+  function renderFocus(S) {
+    const box = $("gm-focus"), pill = $("gm-focus-pill"), f = S.focus;
+    pill.textContent = f ? phrase(f.feedback) : ""; pill.className = "gm-pill " + (f ? (f.feedback === "BALANCED" ? "is-good" : "is-warn") : "");
+    if (!f || !f.bands.length) { box.replaceChildren(missing("No load focus from Garmin today.")); return; }
+    const top = Math.max(...f.bands.map((b) => Math.max(b.load || 0, b.max || 0))) * 1.05 || 1;
+    const pc = (v) => ((v || 0) / top) * 100;
+    box.replaceChildren(
+      h("ul", { class: "gm-rows" }, f.bands.map((b) => row(b.label, bar(pc(b.load), b.status === "within" ? "#C9CDD2" : MID, [pc(b.min), pc(b.max)]),
+        `${num(b.load)} · ${b.status === "within" ? "on target" : b.status || ""}`))),
+      h("p", { class: "st-note" }, "Shaded area is Garmin's target range for each intensity band over the last 4 weeks."));
+  }
+
+  function renderDay(S) {
+    const box = $("gm-day"), d = S.day, weeks = S.im || [];
+    const parts = [];
+    if (d) {
+      const goal = d.stepGoal || 0;
+      parts.push(h("div", { class: "gm-kv" },
+        h("div", {}, h("span", {}, "Steps"), h("strong", {}, d.steps != null ? Number(d.steps).toLocaleString() : "–"), h("small", {}, goal ? `goal ${Number(goal).toLocaleString()}` : "")),
+        h("div", {}, h("span", {}, "Stress"), h("strong", {}, num(d.stress)), h("small", {}, "average today")),
+        h("div", {}, h("span", {}, "Battery"), h("strong", {}, d.bbHigh != null ? `${d.bbLow}–${d.bbHigh}` : "–"), h("small", {}, "low–high today"))));
+      if (goal && d.steps != null) parts.push(h("ul", { class: "gm-rows" }, row("Step goal", bar((d.steps / goal) * 100, d.steps >= goal ? GOOD : "#C9CDD2"), `${Math.round((d.steps / goal) * 100)}%`)));
+    } else parts.push(missing("No daily summary from Garmin today."));
+    if (weeks.length) {
+      const top = Math.max(...weeks.map((w) => Math.max(w.total, w.goal))) * 1.05 || 1;
+      const thisWeek = weeks[weeks.length - 1].week;
+      parts.push(h("p", { class: "gm-sub" }, "Intensity minutes"),
+        h("ul", { class: "gm-rows" }, weeks.map((w) => row(w.week === thisWeek ? "This week" : `Wk of ${fromYmd(w.week).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`,
+          bar((w.total / top) * 100, w.total >= w.goal ? GOOD : "#C9CDD2", [(w.goal / top) * 100, (w.goal / top) * 100 + 0.6]), `${w.total} / ${w.goal}`))),
+        h("p", { class: "st-note" }, "Vigorous minutes count double, as Garmin does. The marker is your weekly goal."));
+    }
+    box.replaceChildren(...parts);
+  }
+
+  function setStatus(text, warn) { const s = $("gm-status"); s.textContent = text || ""; s.classList.toggle("is-warn", !!warn); }
+  function renderSource() {
+    const chip = $("gm-source");
+    if (!current) { chip.hidden = true; return; }
+    const today = ymd(new Date());
+    chip.hidden = false;
+    chip.className = "gm-chip" + (current.source === "live" ? " is-live" : current.date !== today ? " is-old" : "");
+    chip.textContent = current.source === "live" ? "Live" : current.date !== today ? "Saved · older" : "Saved";
+    const when = fmtWhen(current.fetchedAt);
+    setStatus(current.source === "live"
+      ? `From Garmin Connect on this PC · ${when}${current.partial ? ` · ${current.partial} item${current.partial > 1 ? "s" : ""} couldn't load` : ""}`
+      : `Snapshot saved ${when}${current.savedBy === "scheduled" ? " by the morning refresh" : ""}${current.date !== today ? ` (Garmin data for ${dayLong(current.date)})` : ""}`, current.date !== today);
+  }
+  function render() {
+    if (!current) return;
+    $("gm-body").hidden = false;
+    renderSource();
+    const S = current.S;
+    renderTiles(S); renderReady(S); renderTrain(S); renderSleep(S); renderFocus(S); renderDay(S);
+  }
+
+  // ---------- live + saved ----------
+  let db = null, user = null, mcp = null, perms = null, saved = null, busy = false, hostReady = false;
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  async function callOne(tool, input, refresh) {
+    const opts = { cache: refresh ? { ...CACHE, refresh: true } : CACHE };
+    try {
+      return await mcp.callTool(HOST, tool, input, opts);
+    } catch (e) {
+      if (!(e && e.retryable)) throw e;
+      await wait(Math.min(e.retryAfterMs || 1500 + Math.random() * 1500, 10000));
+      return await mcp.callTool(HOST, tool, input, opts);
+    }
+  }
+  function errorCopy(e) {
+    switch (e && e.code) {
+      case "server_not_connected": return "Garmin Connect isn't reachable here. Live data works in the Claude desktop app on the PC that runs the Garmin server.";
+      case "cancelled": return "The Garmin request was declined in the Claude app.";
+      case "not_in_manifest": case "approval_required": case "consent_required": return "This page isn't allowed to use Garmin Connect yet. Allow it from the page's Permissions menu.";
+      case "blocked_by_policy": return "Your organization doesn't allow this page to use Garmin Connect.";
+      case "tool_error": return `Garmin Connect reported an error: ${e.message || "no details"}.`;
+      case "server_unavailable": case "rate_limited": case "upstream_error": return "Garmin Connect didn't respond. Try Refresh in a minute.";
+      default: return "Couldn't load live data from Garmin Connect. Try Refresh.";
+    }
+  }
+  function setBusy(on) {
+    busy = on;
+    $("gm-live").disabled = on; $("gm-refresh").disabled = on;
+    $("gm-body").classList.toggle("is-loading", on);
+    if (on) setStatus("Loading from Garmin Connect…", false);
+  }
+  async function loadLive(refresh) {
+    if (busy || !mcp) return;
+    setBusy(true);
+    const date = ymd(new Date()), p = plan(date), keys = Object.keys(p);
+    const results = await Promise.allSettled(keys.map((k) => callOne(p[k][0], p[k][1], refresh)));
+    setBusy(false);
+    const raw = {}, errs = [];
+    let fetchedAt = Date.now();
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled") {
+        raw[keys[i]] = r.value.payload;
+        if (r.value.cache && r.value.cache.storedAt) fetchedAt = Math.min(fetchedAt, r.value.cache.storedAt);
+      } else errs.push(r.reason);
+    });
+    if (!Object.keys(raw).length) {
+      const e = errs[0];
+      if (e && e.code === "server_not_connected") { $("gm-live").hidden = true; $("gm-refresh").hidden = true; }
+      if (current) { renderSource(); setStatus(`${errorCopy(e)} Showing the saved snapshot.`, true); }
+      else setStatus(errorCopy(e), true);
+      return;
+    }
+    let filled = 0;
+    if (saved && saved.date === date && saved.raw) for (const k of keys) if (!(k in raw) && saved.raw[k] != null) { raw[k] = saved.raw[k]; filled++; }
+    current = { S: normalise(raw), fetchedAt, source: "live", date, partial: errs.length - filled };
+    $("gm-live").hidden = true; $("gm-refresh").hidden = false;
+    render();
+    if (errs.length === 0 || filled === errs.length) save(raw, date, fetchedAt);
+  }
+  async function save(raw, date, fetchedAt) {
+    if (!db || !user) return;
+    let can = null;
+    try { can = await user.canEdit(); } catch (e) {}
+    if (can === false) return;
+    if (saved && saved.fetchedAt >= fetchedAt) return;
+    try { await db.doc(DOC).set({ v: 1, date, fetchedAt, source: "live", raw }); } catch (e) {}
+  }
+  function watchSaved() {
+    db.doc(DOC).onSnapshot((snap) => {
+      const d = snap.exists ? snap.data() : null;
+      if (!d || !d.raw || !d.fetchedAt) return;
+      saved = d;
+      if (current && current.source === "live" && current.fetchedAt >= d.fetchedAt) return;
+      current = { S: normalise(d.raw), fetchedAt: d.fetchedAt, source: "saved", date: d.date || ymd(new Date(d.fetchedAt)), savedBy: d.source };
+      render();
+    }, () => {});
+  }
+
+  $("gm-live").onclick = () => loadLive(false);
+  $("gm-refresh").onclick = () => loadLive(true);
+  let rz;
+  window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (current) { renderTrain(current.S); renderSleep(current.S); } }, 120); });
+
+  (async function start() {
+    const use = (n) => Promise.resolve(window.claude?.use?.(n) ?? null).catch(() => null);
+    [db, user, mcp, perms] = await Promise.all([use("db"), use("user"), use("mcp"), use("permissions")]);
+    if (db) watchSaved();
+    setTimeout(() => {
+      if (current || busy) return;
+      if (!db && !mcp) setStatus("Garmin data shows when this page is open on claude.ai.", false);
+      else if (hostReady) setStatus("No Garmin snapshot saved yet. Use Get live data to pull today's numbers.", false);
+      else setStatus("No Garmin snapshot saved yet. It's refreshed each morning from the PC that runs Garmin Connect.", false);
+    }, 10000);
+    if (!mcp) return;
+    let listed = false;
+    try { const r = await mcp.listTools(HOST); listed = (r.servers || []).some((s) => s.server === HOST); } catch (e) {}
+    if (!listed) return; // not in the Claude desktop app with Garmin Connect running
+    hostReady = true;
+    const st = perms ? await perms.state(`mcp:${HOST}`).catch(() => "unavailable") : "prompt";
+    if (st === "unavailable") return;
+    if (st === "granted") { loadLive(false); return; }
+    if (st === "denied") { if (!current) setStatus("Garmin access was declined for this page. Allow it from the page's Permissions menu.", true); return; }
+    $("gm-live").hidden = false;
+    if (!current) setStatus("Get today's numbers straight from Garmin Connect on this PC. Claude will ask you to allow it first.", false);
   })();
 })();
 </script>
