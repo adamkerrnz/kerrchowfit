@@ -26,7 +26,7 @@ The Stats screenshot uses sample numbers.
   - Sun: long easy ride, 60–90 min, HR 141–158 bpm
 - **Strength sessions as a game:** the six exercises come in a shuffled order each week (seeded by week and plan start date, so every device agrees). Only the current exercise is shown; the rest are collapsed "mystery" strips that open one at a time as you tick each off.
 - **Exercise demos:** each exercise has an animated stick-figure demo, form cues and a link to video demos.
-- **Weather:** rain and wind for each day (AccuWeather daytime forecast for Auckland Central), with a note on what it means for that day's session.
+- **Weather:** rain and wind for each day (Open-Meteo daytime forecast for Auckland Central; free, open data), with a note on what it means for that day's session.
 - **Garmin (Stats tab):** sleep score and stages, overnight HRV, resting heart rate, Body Battery, steps, stress and weekly intensity minutes, from Garmin's official Connect Personal API. Enter your Personal API key under **Garmin API setup** (self-hosted).
 - **Strava (Stats tab):** weekly streak, recent PRs, best 20-min power, fastest 5K, a 16-week training-load chart and the latest activities. Self-hosted, enter your Strava API app under **Strava API setup** and connect; on claude.ai the Strava connector is used. Nothing is fetched until the Stats tab is first opened.
 
