@@ -1,6 +1,0 @@
-{
-  "name": "KerrChowFit",
-  "description": "A 12-week bike, run and strength training tracker with daily weather, workout check-offs, and stats.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

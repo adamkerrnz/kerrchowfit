@@ -1,86 +1,114 @@
-"""Garmin Connect, via the unofficial `garminconnect` library (Garmin has no public API for individuals).
+"""Garmin, via Garmin's official Connect Personal API (https://developer.garmin.com/gc-developer-program/personal/).
 
-Answers the eight tools the page calls, translated into the same "curated" shapes the Garmin Connect
-MCP server returns, so the page's Garmin section works unchanged. Garmin's raw field names are not
-documented and can change; GET /api/debug/garmin/<tool> shows the raw response if a field goes missing.
+The owner creates a Personal API key on Garmin Connect Web (Settings -> Personal API Key) and enters it on the
+Stats tab (or sets GARMIN_PERSONAL_API_KEY). The key is exchanged for a short-lived bearer token, which reads the
+owner's own daily summary, HRV and sleep. Answers are translated into the small shapes the page renders.
 """
+import base64
 import datetime as dt
+import json
 import logging
 import os
 import threading
-from pathlib import Path
+import time
 from zoneinfo import ZoneInfo
+
+import httpx
 
 from . import store
 from .errors import ToolError
 
 log = logging.getLogger("garmin")
-TOOLS = ["get_user_summary", "get_training_readiness", "get_hrv_data", "get_sleep_summary_range",
-         "get_training_status", "get_training_load_balance", "get_vo2max_trend", "get_weekly_intensity_minutes"]
-TOKENS = os.getenv("GARMIN_TOKENS", "/data/garmin-tokens")
+BASE = os.getenv("GARMIN_PERSONAL_API_BASE_URL", "https://personal.connectapi.garmin.com").rstrip("/")
+TOKEN_PATH = "/personalapitoken-service/personal-api/personal-api-key/token"
+TOOLS = ["get_user_summary", "get_hrv_data", "get_sleep_summary_range", "get_weekly_intensity_minutes"]
 TZ = ZoneInfo(os.getenv("TZ", "Pacific/Auckland"))
 TODAY_TTL = 10 * 60  # today's numbers change during the day
 PAST_TTL = 6 * 3600  # earlier days settle
+KEY_KV, TOKEN_KV = "garmin_api_key", "garmin_token"
+_token_lock = threading.Lock()
 
-_lock = threading.Lock()
-_client = None
+
+# ---------- credentials ----------
+def api_key() -> str:
+    """Key saved from the Stats tab wins over the environment, so it can be rotated without a redeploy."""
+    return (store.kv_get(KEY_KV) or os.getenv("GARMIN_PERSONAL_API_KEY", "")).strip()
 
 
-def _has_tokens() -> bool:
-    p = Path(TOKENS)
-    return p.is_dir() and any(p.iterdir())
+def key_source() -> str | None:
+    return "saved" if store.kv_get(KEY_KV) else "env" if os.getenv("GARMIN_PERSONAL_API_KEY", "").strip() else None
 
 
 def configured() -> bool:
-    return _has_tokens() or bool(os.getenv("GARMIN_EMAIL") and os.getenv("GARMIN_PASSWORD"))
+    return bool(api_key())
 
 
-def client():
-    """Signed-in Garmin client: saved tokens first, else email + password from the environment."""
-    global _client
-    from garminconnect import Garmin
-    with _lock:
-        if _client is not None:
-            return _client
-        if _has_tokens():
-            try:
-                g = Garmin()
-                g.login(TOKENS)
-                _client = g
-                return g
-            except Exception as e:  # tokens expired or unreadable: fall through to a password login
-                log.warning("saved Garmin tokens didn't work: %s", e)
-        email, password = os.getenv("GARMIN_EMAIL"), os.getenv("GARMIN_PASSWORD")
-        if not (email and password):
-            raise ToolError("server_not_connected", "Garmin isn't signed in. Set GARMIN_EMAIL and GARMIN_PASSWORD, or run python -m app.garmin_login in the container.")
-        g = Garmin(email, password, return_on_mfa=True)
-        res = g.login()
-        if isinstance(res, tuple) and res and res[0] == "needs_mfa":
-            raise ToolError("needs_reauth", "Garmin asked for a 2-step verification code. Run python -m app.garmin_login in the container console.")
-        Path(TOKENS).mkdir(parents=True, exist_ok=True)
-        g.garth.dump(TOKENS)
-        _client = g
-        return g
-
-
-def _g(method: str, *args):
-    """Call a garminconnect method, turning its errors into the page's error codes."""
-    global _client
-    from garminconnect import (GarminConnectAuthenticationError, GarminConnectConnectionError,
-                               GarminConnectTooManyRequestsError)
+def _jwt_exp(token: str) -> float:
+    """Expiry from the token's JWT payload; one hour if it can't be read."""
     try:
-        return getattr(client(), method)(*args)
-    except ToolError:
-        raise
-    except GarminConnectAuthenticationError as e:
-        _client = None
-        raise ToolError("needs_reauth", f"Garmin sign-in failed: {e}")
-    except GarminConnectTooManyRequestsError:
-        raise ToolError("server_unavailable", "Garmin is rate limiting requests. Try again later.")
-    except GarminConnectConnectionError as e:
-        raise ToolError("server_unavailable", f"Couldn't reach Garmin Connect: {e}", retryable=True)
+        part = token.split(".")[1]
+        return float(json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))["exp"])
+    except Exception:
+        return time.time() + 3600
 
 
+def _exchange(key: str) -> dict:
+    try:
+        r = httpx.post(BASE + TOKEN_PATH, headers={"Authorization": f"ApiKey {key}", "Accept": "*/*"}, timeout=20)
+    except httpx.HTTPError as e:
+        raise ToolError("server_unavailable", f"Couldn't reach Garmin: {e}", retryable=True)
+    if r.status_code in (400, 401, 403):
+        raise ToolError("needs_reauth", "Garmin didn't accept the Personal API key. Create a new one on Garmin Connect Web and enter it on the Stats tab.")
+    if r.status_code >= 400:
+        raise ToolError("server_unavailable", f"Garmin token request failed (HTTP {r.status_code}).", retryable=True)
+    token = r.text.strip()  # the token endpoint returns the bearer JWT as plain text
+    return {"token": token, "expires_at": _jwt_exp(token)}
+
+
+def save_key(key: str) -> None:
+    """Validate a key by exchanging it, then keep both. Raises ToolError if Garmin refuses it."""
+    key = (key or "").strip()
+    if not key:
+        raise ToolError("bad_request", "Enter a Garmin Personal API key.")
+    tok = _exchange(key)
+    store.kv_put(KEY_KV, key)
+    store.kv_put(TOKEN_KV, tok)
+
+
+def clear_key() -> None:
+    store.kv_delete(KEY_KV)
+    store.kv_delete(TOKEN_KV)
+
+
+def _token() -> str:
+    key = api_key()
+    if not key:
+        raise ToolError("server_not_connected", "Garmin isn't set up yet. Enter your Personal API key on the Stats tab.")
+    with _token_lock:  # the page makes several calls at once; refresh only once
+        t = store.kv_get(TOKEN_KV)
+        if t and t.get("token") and t.get("expires_at", 0) > time.time() + 300:
+            return t["token"]
+        t = _exchange(key)
+        store.kv_put(TOKEN_KV, t)
+        return t["token"]
+
+
+def _get(path: str, params: dict | None = None):
+    try:
+        r = httpx.get(BASE + path, params=params, headers={"Authorization": f"Bearer {_token()}", "Accept": "application/json"}, timeout=30)
+    except httpx.HTTPError as e:
+        raise ToolError("server_unavailable", f"Couldn't reach Garmin: {e}", retryable=True)
+    if r.status_code == 401:
+        store.kv_delete(TOKEN_KV)
+        raise ToolError("needs_reauth", "Garmin rejected the access token. Check the Personal API key on the Stats tab.")
+    if r.status_code == 429:
+        raise ToolError("rate_limited", "Garmin is rate limiting requests. Try again later.", retryable=True, retry_after_ms=60000)
+    if r.status_code >= 400:
+        raise ToolError("upstream_error", f"Garmin returned HTTP {r.status_code} for {path}.")
+    return r.json() if r.content else None
+
+
+# ---------- helpers ----------
 def _today() -> str:
     return dt.datetime.now(TZ).date().isoformat()
 
@@ -94,253 +122,122 @@ def _cached(key: str, day: str, fn, refresh: bool):
     return value, store.cache_put(key, value)
 
 
-def _days(start: str, end: str):
-    d, e = dt.date.fromisoformat(start), dt.date.fromisoformat(end)
-    while d <= e:
-        yield d.isoformat()
-        d += dt.timedelta(days=1)
+def _list(raw, *keys):
+    """Garmin wraps some lists ({"data": [...]}, {"hrvSummaries": [...]}); unwrap to a plain list."""
+    for k in keys:
+        if isinstance(raw, dict) and isinstance(raw.get(k), list):
+            return raw[k]
+    return raw if isinstance(raw, list) else []
 
 
-# ---------- translations into the MCP server's shapes ----------
-def _readiness_entry(x: dict) -> dict:
-    rec = x.get("recoveryTime")  # minutes
-    return {
-        "date": x.get("calendarDate"), "timestamp": x.get("timestampLocal") or x.get("timestamp"),
-        "context": x.get("inputContext"), "level": x.get("level"), "score": x.get("score"), "feedback": x.get("feedbackShort"),
-        "sleep_score": x.get("sleepScore"),
-        "sleep_factor_percent": x.get("sleepScoreFactorPercent"), "sleep_factor_feedback": x.get("sleepScoreFactorFeedback"),
-        "recovery_time_hours": round(rec / 60, 1) if rec is not None else None,
-        "recovery_factor_percent": x.get("recoveryTimeFactorPercent"), "recovery_factor_feedback": x.get("recoveryTimeFactorFeedback"),
-        "training_load_factor_percent": x.get("acwrFactorPercent"), "training_load_feedback": x.get("acwrFactorFeedback"),
-        "acute_load": x.get("acuteLoad"),
-        "hrv_factor_percent": x.get("hrvFactorPercent"), "hrv_factor_feedback": x.get("hrvFactorFeedback"),
-        "hrv_weekly_avg": x.get("hrvWeeklyAverage"),
-        "stress_history_factor_percent": x.get("stressHistoryFactorPercent"), "stress_history_feedback": x.get("stressHistoryFactorFeedback"),
-        "sleep_history_factor_percent": x.get("sleepHistoryFactorPercent"), "sleep_history_feedback": x.get("sleepHistoryFactorFeedback"),
-    }
+# ---------- tools (shapes the page renders) ----------
+SUMMARY_FIELDS = ("totalSteps", "dailyStepGoal", "restingHeartRate", "lastSevenDaysAvgRestingHeartRate", "averageStressLevel",
+                  "bodyBatteryMostRecentValue", "bodyBatteryHighestValue", "bodyBatteryLowestValue", "bodyBatteryAtWakeTime",
+                  "moderateIntensityMinutes", "vigorousIntensityMinutes")
 
 
-def training_readiness(date: str):
-    raw = _g("get_training_readiness", date) or []
-    items = raw if isinstance(raw, list) else [raw]
-    return [_readiness_entry(x) for x in items if isinstance(x, dict)]
+def user_summary(date: str) -> dict:
+    raw = _get("/usersummary-service/usersummary/daily", {"calendarDate": date}) or {}
+    return {k: raw.get(k) for k in SUMMARY_FIELDS}
 
 
-def hrv(date: str):
-    raw = _g("get_hrv_data", date) or {}
-    s = raw.get("hrvSummary") or {}
+def hrv(date: str) -> dict:
+    s = (_get(f"/hrv-service/hrv/{date}") or {}).get("hrvSummary") or {}
     b = s.get("baseline") or {}
-    return {"date": date, "last_night_avg_hrv_ms": s.get("lastNightAvg"), "last_night_5min_high_hrv_ms": s.get("lastNight5MinHigh"),
-            "weekly_avg_hrv_ms": s.get("weeklyAvg"), "baseline_balanced_low_ms": b.get("balancedLow"),
-            "baseline_balanced_upper_ms": b.get("balancedUpper"), "baseline_low_upper_ms": b.get("lowUpper"),
+    return {"date": date, "last_night_avg_hrv_ms": s.get("lastNightAvg"), "weekly_avg_hrv_ms": s.get("weeklyAvg"),
+            "baseline_balanced_low_ms": b.get("balancedLow"), "baseline_balanced_upper_ms": b.get("balancedUpper"),
             "status": s.get("status"), "feedback": s.get("feedbackPhrase")}
 
 
-def _sleep_night(date: str):
-    raw = _g("get_sleep_data", date) or {}
-    d = raw.get("dailySleepDTO") or {}
-    if not d.get("sleepTimeSeconds"):
-        return None
-    score = ((d.get("sleepScores") or {}).get("overall") or {})
-    return {"date": date, "sleep_seconds": d.get("sleepTimeSeconds"), "sleep_score": score.get("value"),
-            "sleep_score_qualifier": score.get("qualifierKey"), "deep_sleep_seconds": d.get("deepSleepSeconds"),
-            "light_sleep_seconds": d.get("lightSleepSeconds"), "rem_sleep_seconds": d.get("remSleepSeconds"),
-            "awake_seconds": d.get("awakeSleepSeconds"), "resting_heart_rate_bpm": raw.get("restingHeartRate"),
-            "avg_overnight_hrv": raw.get("avgOvernightHrv")}
-
-
-def sleep_range(start: str, end: str, refresh: bool):
-    nights, oldest = [], None
-    for day in _days(start, end):
-        night, stored = _cached(f"garmin:sleep:{day}", day, lambda day=day: _sleep_night(day), refresh and day == end)
-        oldest = stored if oldest is None else min(oldest, stored)
-        if night:
-            nights.append(night)
-    return {"start_date": start, "end_date": end, "nights": nights}, oldest
-
-
-def _status_raw(date: str, refresh: bool):
-    return _cached(f"garmin:status:{date}", date, lambda: _g("get_training_status", date) or {}, refresh)
-
-
-def _pick_device(d: dict):
-    """The entry for the primary training device; with one device (or none flagged) the first entry."""
-    if not isinstance(d, dict) or not d:
-        return None, {}
-    for dev, v in d.items():
-        if isinstance(v, dict) and v.get("primaryTrainingDevice"):
-            return dev, v
-    return next(iter(d.items()))
-
-
-def training_status(date: str, refresh: bool):
-    raw, stored = _status_raw(date, refresh)
-    latest = ((raw.get("mostRecentTrainingStatus") or {}).get("latestTrainingStatusData")) or {}
-    dev, t = _pick_device(latest)
-    acwr = t.get("acuteTrainingLoadDTO") or {}
-    vo2 = raw.get("mostRecentVO2Max") or {}
-    gen, cyc = vo2.get("generic") or {}, vo2.get("cycling") or {}
-    return {"date": date, "reporting_device_id": dev, "training_status": t.get("trainingStatus"),
-            "training_status_feedback": t.get("trainingStatusFeedbackPhrase"), "sport": t.get("sport"),
-            "vo2_max": gen.get("vo2MaxValue"), "vo2_max_precise": gen.get("vo2MaxPreciseValue"),
-            "cycling_vo2_max": cyc.get("vo2MaxValue"), "cycling_vo2_max_precise": cyc.get("vo2MaxPreciseValue"),
-            "acute_load": acwr.get("dailyTrainingLoadAcute"), "chronic_load": acwr.get("dailyTrainingLoadChronic"),
-            "load_ratio": acwr.get("dailyAcuteChronicWorkloadRatio"), "acwr_status": acwr.get("acwrStatus"),
-            "optimal_chronic_load_min": acwr.get("minTrainingLoadChronic"),
-            "optimal_chronic_load_max": acwr.get("maxTrainingLoadChronic")}, stored
-
-
-def load_balance(date: str, refresh: bool):
-    raw, stored = _status_raw(date, refresh)
-    m = ((raw.get("mostRecentTrainingLoadBalance") or {}).get("metricsTrainingLoadBalanceDTOMap")) or {}
-    _, d = _pick_device(m)
-
-    def band(name: str):
-        load, lo, hi = d.get(f"monthlyLoad{name}"), d.get(f"monthlyLoad{name}TargetMin"), d.get(f"monthlyLoad{name}TargetMax")
-        if load is None:
-            return None
-        status = "below" if lo is not None and load < lo else "above" if hi is not None and load > hi else "within"
-        return {"load": round(load, 1), "target_min": lo, "target_max": hi, "status": status}
-
-    out = {"date": date, "feedback": d.get("trainingBalanceFeedbackPhrase")}
-    for key, name in (("aerobic_low", "AerobicLow"), ("aerobic_high", "AerobicHigh"), ("anaerobic", "Anaerobic")):
-        b = band(name)
-        if b:
-            out[key] = b
-    return out, stored
-
-
-def _vo2_day(date: str):
-    raw = _g("get_max_metrics", date) or []
-    item = raw[0] if isinstance(raw, list) and raw else raw if isinstance(raw, dict) else {}
-    return {"generic": (item.get("generic") or {}).get("vo2MaxPreciseValue"),
-            "cycling": (item.get("cycling") or {}).get("vo2MaxPreciseValue")}
-
-
-VO2_BUDGET = 8  # uncached days fetched per call; the rest fill in on later calls and the hourly job
-
-
-def vo2_trend(start: str, end: str, refresh: bool, budget: int = VO2_BUDGET):
-    """Daily VO2 max, kept in the database so each day is only fetched once.
-
-    Newest days first, at most `budget` Garmin requests per call, so the first load doesn't fire ~56 requests at once.
-    Days not fetched yet are simply missing from the trend until a later call fills them in.
-    """
-    days = list(_days(start, end))
-    per_day, oldest = {}, None
-    today = _today()
-    for day in reversed(days):
-        hit = store.cache_get(f"garmin:vo2:{day}", TODAY_TTL if day >= today else None)
-        if hit and day < today:
-            # A past day is final only if it was fetched after that day ended; otherwise fetch it once more.
-            day_end = dt.datetime.combine(dt.date.fromisoformat(day) + dt.timedelta(days=1), dt.time(), TZ).timestamp()
-            if hit[1] < day_end:
-                hit = None
-        if hit and not (refresh and day == end):
-            v, stored = hit
-        elif budget > 0 or day == end:
-            budget -= 1
-            v = _vo2_day(day)
-            stored = store.cache_put(f"garmin:vo2:{day}", v)
-        else:
-            continue  # not fetched yet
-        per_day[day] = v
-        oldest = stored if oldest is None else min(oldest, stored)
-    sport = "cycling" if any(v.get("cycling") for v in per_day.values()) else "generic"
-    trend, last = [], None
-    for day in days:
-        if day not in per_day:
+def sleep_range(start: str, end: str) -> dict:
+    sleeps = _list(_get("/sleep-service/sleep/dailySleepSummariesByDate", {"startDate": start, "endDate": end}))
+    try:  # overnight HRV per night is optional: sleep still shows without it
+        hrvs = {x.get("calendarDate"): x.get("lastNightAvg") for x in _list(_get(f"/hrv-service/hrv/daily/{start}/{end}"), "hrvSummaries")}
+    except ToolError:
+        hrvs = {}
+    nights = []
+    for d in sleeps:
+        d = d.get("dailySleepDTO", d) if isinstance(d, dict) else {}
+        if not d.get("sleepTimeSeconds"):
             continue
-        v = per_day[day].get(sport)
-        if v is not None:
-            last = v
-            trend.append({"date": day, "vo2_max": v})
-        elif last is not None:
-            trend.append({"date": day, "vo2_max": last, "carried_forward": True})
-    first_v = trend[0]["vo2_max"] if trend else None
-    last_v = trend[-1]["vo2_max"] if trend else None
-    return {"start_date": start, "end_date": end, "sport": "cycling" if sport == "cycling" else "running",
-            "first_vo2_max": first_v, "latest_vo2_max": last_v,
-            "change": round(last_v - first_v, 1) if trend else None, "trend": trend}, oldest
+        score = (d.get("sleepScores") or {}).get("overall") or {}
+        nights.append({"date": d.get("calendarDate"), "sleep_seconds": d.get("sleepTimeSeconds"), "sleep_score": score.get("value"),
+                       "deep_sleep_seconds": d.get("deepSleepSeconds"), "light_sleep_seconds": d.get("lightSleepSeconds"),
+                       "rem_sleep_seconds": d.get("remSleepSeconds"), "awake_seconds": d.get("awakeSleepSeconds"),
+                       "avg_overnight_hrv": hrvs.get(d.get("calendarDate"))})
+    return {"start_date": start, "end_date": end, "nights": nights}
 
 
-def intensity_minutes(end: str, weeks: int):
+def intensity_minutes(end: str, weeks: int) -> dict:
+    """Weekly totals (Mon-Sun) summed from daily summaries; vigorous minutes count double, as Garmin does."""
     e = dt.date.fromisoformat(end)
-    start = (e - dt.timedelta(days=e.weekday()) - dt.timedelta(weeks=weeks)).isoformat()
-    raw = _g("get_weekly_intensity_minutes", start, end) or []
-    out = []
-    for w in raw if isinstance(raw, list) else []:
-        mod, vig = w.get("moderateValue") or 0, w.get("vigorousValue") or 0
-        out.append({"week_start": w.get("calendarDate"), "weekly_goal": w.get("weeklyGoal") or 150,
-                    "moderate_minutes": mod, "vigorous_minutes": vig, "total_minutes": mod + 2 * vig})
-    out.sort(key=lambda w: w["week_start"] or "", reverse=True)
+    first = e - dt.timedelta(days=e.weekday(), weeks=weeks)
+    days = _list(_get("/usersummary-service/v2/dailysummaries", {"startDate": first.isoformat(), "endDate": end}), "data")
+    by_week: dict[str, dict] = {}
+    for d in days:
+        if not isinstance(d, dict) or not d.get("calendarDate"):
+            continue
+        day = dt.date.fromisoformat(d["calendarDate"][:10])
+        im = d.get("intensityMinutes") or {}
+        w = by_week.setdefault((day - dt.timedelta(days=day.weekday())).isoformat(), {"moderate": 0, "vigorous": 0, "goal": None})
+        w["moderate"] += im.get("moderate") or 0
+        w["vigorous"] += im.get("vigorous") or 0
+        w["goal"] = im.get("goal") or w["goal"]
+    out = [{"week_start": k, "weekly_goal": v["goal"] or 150, "moderate_minutes": v["moderate"], "vigorous_minutes": v["vigorous"],
+            "total_minutes": v["moderate"] + 2 * v["vigorous"]} for k, v in by_week.items()]
+    out.sort(key=lambda w: w["week_start"], reverse=True)
     return {"end_date": end, "weekly_data": out}
 
 
-# ---------- dispatch ----------
 def call(tool: str, inp: dict, refresh: bool):
+    """Returns (payload, stored_at_seconds)."""
     inp = inp or {}
     date = inp.get("date") or _today()
     if tool == "get_user_summary":
-        return _cached(f"garmin:summary:{date}", date, lambda: _g("get_user_summary", date), refresh)
-    if tool == "get_training_readiness":
-        return _cached(f"garmin:readiness:{date}", date, lambda: training_readiness(date), refresh)
+        return _cached(f"garmin:summary:{date}", date, lambda: user_summary(date), refresh)
     if tool == "get_hrv_data":
         return _cached(f"garmin:hrv:{date}", date, lambda: hrv(date), refresh)
     if tool == "get_sleep_summary_range":
-        return sleep_range(inp["start_date"], inp["end_date"], refresh)
-    if tool == "get_training_status":
-        return training_status(date, refresh)
-    if tool == "get_training_load_balance":
-        return load_balance(date, refresh)
-    if tool == "get_vo2max_trend":
-        return vo2_trend(inp["start_date"], inp["end_date"], refresh)
+        s, e = inp["start_date"], inp["end_date"]
+        return _cached(f"garmin:sleep:{s}:{e}", e, lambda: sleep_range(s, e), refresh)
     if tool == "get_weekly_intensity_minutes":
-        end = inp.get("end_date") or _today()
-        weeks = int(inp.get("weeks") or 4)
+        end, weeks = inp.get("end_date") or _today(), int(inp.get("weeks") or 4)
         return _cached(f"garmin:im:{end}:{weeks}", end, lambda: intensity_minutes(end, weeks), refresh)
     raise ToolError("not_in_manifest", f"Unknown Garmin tool {tool}")
 
 
-RAW = {  # for GET /api/debug/garmin/<name>: the untranslated Garmin response
-    "summary": "get_user_summary", "readiness": "get_training_readiness", "hrv": "get_hrv_data",
-    "sleep": "get_sleep_data", "status": "get_training_status", "maxmetrics": "get_max_metrics",
+# ---------- debugging: the untranslated Garmin response ----------
+RAW = {
+    "summary": lambda d: _get("/usersummary-service/usersummary/daily", {"calendarDate": d}),
+    "hrv": lambda d: _get(f"/hrv-service/hrv/{d}"),
+    "sleep": lambda d: _get("/sleep-service/sleep/dailySleep", {"date": d}),
+    "dailysummaries": lambda d: _get("/usersummary-service/v2/dailysummaries", {"startDate": d, "endDate": d}),
 }
 
 
 def raw(name: str, date: str | None):
     if name not in RAW:
         raise ToolError("bad_request", f"Unknown raw view {name}")
-    return _g(RAW[name], date or _today())
-
-
-def warm_vo2() -> None:
-    """Background job: keep filling the 8-week VO2 max history a few days at a time."""
-    if not configured():
-        return
-    today = dt.datetime.now(TZ).date()
-    try:
-        vo2_trend((today - dt.timedelta(days=55)).isoformat(), today.isoformat(), False)
-    except ToolError as e:
-        log.warning("VO2 max warm-up: %s", e.message)
+    return RAW[name](date or _today())
 
 
 # ---------- the morning snapshot the page shows on any device ----------
-def snapshot() -> None:
-    today = dt.datetime.now(TZ).date()
+def plan(today: dt.date) -> dict:
     t = today.isoformat()
-    plan = {
+    return {
         "summary": ("get_user_summary", {"date": t}),
-        "readiness": ("get_training_readiness", {"date": t}),
         "hrv": ("get_hrv_data", {"date": t}),
         "sleep": ("get_sleep_summary_range", {"start_date": (today - dt.timedelta(days=6)).isoformat(), "end_date": t}),
-        "status": ("get_training_status", {"date": t}),
-        "focus": ("get_training_load_balance", {"date": t}),
-        "vo2": ("get_vo2max_trend", {"start_date": (today - dt.timedelta(days=55)).isoformat(), "end_date": t}),
         "im": ("get_weekly_intensity_minutes", {"end_date": t, "weeks": 4}),
     }
+
+
+def snapshot() -> None:
+    if not configured():
+        return
+    today = dt.datetime.now(TZ).date()
     raw_out, failed = {}, []
-    for key, (tool, inp) in plan.items():
+    for key, (tool, inp) in plan(today).items():
         try:
             raw_out[key] = call(tool, inp, True)[0]
         except Exception as e:  # keep going: one missing panel shouldn't lose the rest
@@ -348,6 +245,5 @@ def snapshot() -> None:
     if not raw_out:
         log.error("Garmin snapshot failed: %s", "; ".join(failed))
         return
-    import time
-    store.doc_set("garmin/latest", {"v": 1, "date": t, "fetchedAt": int(time.time() * 1000), "source": "scheduled", "raw": raw_out})
-    log.info("Garmin snapshot saved for %s%s", t, f" ({len(failed)} failed: {'; '.join(failed)})" if failed else "")
+    store.doc_set("garmin/latest", {"v": 2, "date": today.isoformat(), "fetchedAt": int(time.time() * 1000), "source": "scheduled", "raw": raw_out})
+    log.info("Garmin snapshot saved for %s%s", today, f" ({len(failed)} failed: {'; '.join(failed)})" if failed else "")

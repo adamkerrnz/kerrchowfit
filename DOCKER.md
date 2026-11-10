@@ -7,10 +7,10 @@ This runs KerrChow Fit on your own Docker host instead of claude.ai. It uses the
 |---|---|
 | Artifact storage (check-offs, plan start, weather, Garmin snapshot) | SQLite file on the `kerrchowfit-data` volume |
 | Strava connector | Strava's own API, through your own Strava API app (no Strava subscription needed) |
-| Garmin Connect MCP server on your PC | The `garminconnect` library inside the container, signed in with your Garmin account |
+| (no Garmin source on claude.ai) | Garmin's official Connect Personal API, with a Personal API key entered on the Stats tab |
 | AccuWeather connector + scheduled Claude task | Open-Meteo daytime forecast (free, no key), refreshed every 3 hours |
 | Les Mills class details from the scheduled Claude task | Daily check of the club timetable at 4:50 am |
-| Scheduled Claude task for Garmin at 5:45 am | Built-in job at `GARMIN_REFRESH_TIME` |
+| — | Garmin snapshot job at `GARMIN_REFRESH_TIME` |
 | claude.ai sign-in | Username and password for the whole site (required) |
 
 ## How it fits together
@@ -19,11 +19,13 @@ This runs KerrChow Fit on your own Docker host instead of claude.ai. It uses the
 browser ──> kerrchowfit container (port 8000, published as HOST_PORT)
               ├─ /                 index.html + claude-shim.js (provides window.claude)
               ├─ /api/db/*         page data in /data/kerrchowfit.db
-              ├─ /api/mcp/call     Strava + Garmin "connector" calls
-              ├─ /strava/connect   one-time Strava sign-in
+              ├─ /api/mcp/call     Strava "connector" calls (Strava API)
+              ├─ /api/garmin/*     Garmin Personal API data for the Stats tab
+              ├─ /api/integrations Strava + Garmin credentials entered on the Stats tab
+              ├─ /strava/connect   Strava sign-in (OAuth)
               └─ scheduler         Garmin snapshot and class timetable each morning, weather every 3 h,
-                                   Strava best efforts and VO2 history hourly, cache clean-up nightly
-volume kerrchowfit-data → /data   database, Strava tokens, Garmin tokens
+                                   Strava best efforts hourly, cache clean-up nightly
+volume kerrchowfit-data → /data   database, including the Strava and Garmin credentials
 ```
 
 Files:
@@ -33,8 +35,8 @@ Files:
 - `docker/web/claude-shim.js`: makes the page's `window.claude.use("db" | "mcp" | "user" | "permissions")` calls go to the server.
 - `.env.example`: every setting, with examples.
 
-`index.html` itself is unchanged. When serving it, the server adds the shim script and swaps a few claude.ai-specific
-messages (for example "Add it in claude.ai Settings" becomes "Connect it at /strava/connect"). If one of those
+When serving `index.html`, the server adds the shim script and swaps a few claude.ai-specific
+messages (for example "Add it in claude.ai Settings" becomes "Use Strava API setup above"). If one of those
 messages is ever reworded in the page, the server logs a warning at start-up and the tests fail.
 
 ---
@@ -43,7 +45,8 @@ messages is ever reworded in the page, the server logs a warning at start-up and
 
 You need:
 1. A Docker host with **Portainer CE 2.19 or later** (Docker Standalone environment).
-2. Your **Garmin Connect** email and password.
+2. A **Garmin Personal API key**: on Garmin Connect Web open **Settings → Personal API Key**, select **Create Key**,
+   accept the terms and choose an expiry. Copy the key (Garmin shows it once).
 3. A **Strava API application** (free, 2 minutes):
    1. Go to https://www.strava.com/settings/api and create an app.
    2. **Application name:** KerrChow Fit. **Category:** Training. **Website:** anything, e.g. `http://localhost`.
@@ -79,10 +82,6 @@ can't build (it has no source code to build from).
    BASIC_AUTH_USER=adam
    BASIC_AUTH_PASSWORD=pick-a-long-password
    PUBLIC_URL=http://192.168.1.50:8088
-   STRAVA_CLIENT_ID=12345
-   STRAVA_CLIENT_SECRET=your-strava-client-secret
-   GARMIN_EMAIL=you@example.com
-   GARMIN_PASSWORD=your-garmin-password
    GARMIN_REFRESH_TIME=05:45
    WEATHER_LAT=-36.8485
    WEATHER_LON=174.7633
@@ -96,9 +95,9 @@ can't build (it has no source code to build from).
    | `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` | Browser login for the whole site. **Required:** with either one empty, the server answers every request with a set-up message and serves nothing. |
    | `ALLOW_NO_LOGIN` | Set to `true` to run with no login at all. Only for a network nobody else can reach: anyone who can open the address can read your health data and change your check-offs. |
    | `PUBLIC_URL` | The exact address you open the app at. Used for the Strava sign-in redirect. |
-   | `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | From your Strava API app. |
-   | `STRAVA_REFRESH_TOKEN` | Optional. Only if you'd rather paste a token than use `/strava/connect`. |
-   | `GARMIN_EMAIL` / `GARMIN_PASSWORD` | Used once to sign in; the tokens are then saved on the volume. |
+   | `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | Optional: from your Strava API app. Easier to enter on the Stats tab instead. |
+   | `STRAVA_REFRESH_TOKEN` | Optional. Only if you'd rather paste a token than connect from the Stats tab. |
+   | `GARMIN_PERSONAL_API_KEY` | Optional: your Garmin Personal API key. Easier to enter on the Stats tab instead. |
    | `GARMIN_REFRESH_TIME` | When the daily Garmin snapshot runs (24-hour `HH:MM`). |
    | `WEATHER_LAT` / `WEATHER_LON` | Forecast location. Default is Auckland Central. |
    | `LESMILLS_CLUB` / `LESMILLS_TIME` | Club code and class start time for the Tuesday and Thursday class details. Default `01` (Auckland City) at `07:10`. Set `LESMILLS_CLUB=` (empty) to turn the daily timetable check off. |
@@ -108,24 +107,20 @@ can't build (it has no source code to build from).
 
 ### Connect Strava (once)
 
-1. Open `http://<host>:8088/strava/connect` (your `PUBLIC_URL` plus `/strava/connect`) and sign in with your site login.
-2. Strava asks you to authorise KerrChow Fit. Leave **View data about your activities** ticked and click **Authorize**.
-3. You land back on the app. The Strava section loads after a few seconds.
+1. Open the app's **Stats** tab and click **Strava API setup**.
+2. Enter your Strava app's **Client ID** and **Client Secret** and click **Save**.
+3. Click **Connect Strava**. Strava asks you to authorise KerrChow Fit; leave **View data about your activities** ticked
+   and click **Authorize**. You land back on the Stats tab and the Strava section loads.
 
-The Strava tokens are saved on the volume and refresh themselves.
+The Strava tokens are saved on the volume and refresh themselves. **Remove** forgets the app and its tokens.
 
-### Garmin sign-in
+### Connect Garmin (once)
 
-On first start the container signs in with `GARMIN_EMAIL` / `GARMIN_PASSWORD` and saves tokens to `/data/garmin-tokens`.
-Check **Logs** for `Garmin snapshot saved for <date>`.
+1. On the **Stats** tab, click **Garmin API setup**, paste your Personal API key and click **Save key**.
+2. The server checks the key with Garmin straight away, then loads your numbers. It is never sent back to the page.
 
-If your Garmin account uses **2-step verification**, the log says Garmin asked for a code. Then:
-1. **Containers → kerrchowfit → Console**, command `/bin/sh`, user `app`, click **Connect**.
-2. Run `python -m app.garmin_login`, and enter the code Garmin sends you.
-3. Back in Portainer, **restart** the container.
-
-Once tokens are saved you can delete `GARMIN_PASSWORD` from the stack's environment variables and click
-**Update the stack**. The tokens last months; if Garmin expires them, put the password back or run the login command again.
+The key is exchanged for a short-lived access token as needed. When the key expires (you chose 30 days to a year),
+create a new one on Garmin Connect Web and save it the same way.
 
 ### Check it
 
@@ -133,8 +128,8 @@ Once tokens are saved you can delete `GARMIN_PASSWORD` from the stack's environm
 - The Garmin chip reads **Live** when the page fetched it just now, or **Saved** for the morning snapshot.
 - To run a job now: `curl -u adam:password -X POST http://<host>:8088/api/jobs/garmin` (or `/weather`, `/lesmills`).
 - If a Garmin panel says "No data", compare with the raw response at
-  `http://<host>:8088/api/debug/garmin/status` (also `summary`, `readiness`, `hrv`, `sleep`, `maxmetrics`).
-  Garmin's field names aren't documented, so `docker/app/garmin.py` may need a tweak.
+  `http://<host>:8088/api/debug/garmin/summary` (also `hrv`, `sleep`, `dailysummaries`).
+  If Garmin changes a field name, `docker/app/garmin.py` may need a tweak.
 
 ---
 
@@ -159,7 +154,7 @@ Your data stays on the `kerrchowfit-data` volume across updates.
 ## Backups
 
 Everything worth keeping is in the `kerrchowfit-data` volume: `kerrchowfit.db` (check-offs, plan start date,
-snapshots) and the Strava and Garmin tokens. Back up that volume, or the file
+snapshots, and the Strava and Garmin credentials). Back up that volume, or the file
 `/var/lib/docker/volumes/kerrchowfit_kerrchowfit-data/_data/kerrchowfit.db` on the host.
 
 ## Using it away from home
@@ -181,11 +176,8 @@ docker compose up -d --build
 - **Strava best efforts** cover the last 12 months, worked out from your activities, not Strava's all-time records.
   The tiles say so ("Fastest 5K, 12 mo"). The first time, they fill in over a few hours to stay inside Strava's
   rate limit (100 requests per 15 minutes).
-- **Garmin** goes through the unofficial `garminconnect` library. Garmin can change its sign-in or data and break it
-  without notice; updating the library (`docker/requirements.txt`) usually fixes it.
-- **VO2 max trend:** the 8-week history fills in a few days at a time (8 Garmin requests per load, plus an hourly
-  top-up), so the line starts short and is complete within a few hours. With two Garmin devices, the one Garmin
-  marks as your primary training device is used.
+- **Garmin** uses the official Connect Personal API, which covers daily summaries, HRV and sleep. Training readiness,
+  training status, load focus and VO2 max aren't part of it, so the Stats tab doesn't show them.
 - **Weather** comes from Open-Meteo, not AccuWeather. Each day is summed up over 7 am to 7 pm, like AccuWeather's
   daytime forecast. Open-Meteo carries no official warnings, so MetService watches and warnings don't show.
 - **Les Mills class details** come from the data feed behind the club's public timetable page, checked once a day.

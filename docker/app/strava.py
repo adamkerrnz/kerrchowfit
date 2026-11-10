@@ -21,14 +21,44 @@ log = logging.getLogger("strava")
 TOOLS = ["list_activities", "get_active_streak", "get_athlete_best_efforts"]
 API = "https://www.strava.com/api/v3"
 TOKEN_URL = "https://www.strava.com/oauth/token"
-CLIENT_ID = os.getenv("STRAVA_CLIENT_ID", "").strip()
-CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET", "").strip()
 TZ = ZoneInfo(os.getenv("TZ", "Pacific/Auckland"))
 ACTS_TTL = 15 * 60  # seconds the activity list is reused
 DETAIL_BUDGET = 30  # uncached activity detail/stream fetches per best-efforts call (rate limit: 100 / 15 min)
 
 
 # ---------- auth ----------
+APP_KV = "strava_app"
+
+
+def _app() -> tuple[str, str]:
+    """Strava API app (client ID + secret): saved from the Stats tab, else from the environment."""
+    a = store.kv_get(APP_KV)
+    return (a["client_id"], a["client_secret"]) if a else _env_app()
+
+
+def app_source() -> str | None:
+    return "saved" if store.kv_get(APP_KV) else "env" if all(_env_app()) else None
+
+
+def _env_app():
+    return os.getenv("STRAVA_CLIENT_ID", "").strip(), os.getenv("STRAVA_CLIENT_SECRET", "").strip()
+
+
+def save_app(client_id: str, client_secret: str) -> None:
+    """Keep a new API app; tokens from a different app no longer work, so they are dropped."""
+    client_id, client_secret = str(client_id or "").strip(), str(client_secret or "").strip()
+    if not client_id.isdigit() or not client_secret:
+        raise ToolError("bad_request", "Enter the numeric Client ID and the Client Secret from strava.com/settings/api.")
+    if _app() != (client_id, client_secret):
+        store.kv_delete("strava_tokens")
+    store.kv_put(APP_KV, {"client_id": client_id, "client_secret": client_secret})
+
+
+def clear() -> None:
+    store.kv_delete(APP_KV)
+    store.kv_delete("strava_tokens")
+
+
 def _tokens():
     t = store.kv_get("strava_tokens")
     if not t and os.getenv("STRAVA_REFRESH_TOKEN"):
@@ -37,11 +67,11 @@ def _tokens():
 
 
 def configured() -> bool:
-    return bool(CLIENT_ID and CLIENT_SECRET and _tokens())
+    return app_configured() and bool(_tokens())
 
 
 def app_configured() -> bool:
-    return bool(CLIENT_ID and CLIENT_SECRET)
+    return all(_app())
 
 
 STATE_TTL = 10 * 60  # seconds a sign-in may take
@@ -65,9 +95,14 @@ def check_state(state: str | None) -> bool:
 
 def auth_url(redirect_uri: str, state: str) -> str:
     return "https://www.strava.com/oauth/authorize?" + urlencode({
-        "client_id": CLIENT_ID, "redirect_uri": redirect_uri, "response_type": "code",
+        "client_id": _app()[0], "redirect_uri": redirect_uri, "response_type": "code",
         "approval_prompt": "auto", "scope": "read,activity:read_all", "state": state,
     })
+
+
+def _creds() -> dict:
+    cid, sec = _app()
+    return {"client_id": cid, "client_secret": sec}
 
 
 def _save(d: dict) -> None:
@@ -75,7 +110,7 @@ def _save(d: dict) -> None:
 
 
 def exchange_code(code: str) -> None:
-    r = httpx.post(TOKEN_URL, data={"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET, "code": code, "grant_type": "authorization_code"}, timeout=20)
+    r = httpx.post(TOKEN_URL, data={**_creds(), "code": code, "grant_type": "authorization_code"}, timeout=20)
     r.raise_for_status()
     _save(r.json())
 
@@ -92,12 +127,12 @@ def _access_token() -> str:
 def _access_token_locked() -> str:
     t = _tokens()
     if not t:
-        raise ToolError("server_not_connected", "Strava isn't connected yet. Open /strava/connect on this server.")
+        raise ToolError("server_not_connected", "Strava isn't connected yet. Connect Strava on the Stats tab.")
     if t.get("access_token") and t.get("expires_at", 0) > time.time() + 60:
         return t["access_token"]
-    r = httpx.post(TOKEN_URL, data={"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET, "grant_type": "refresh_token", "refresh_token": t["refresh_token"]}, timeout=20)
+    r = httpx.post(TOKEN_URL, data={**_creds(), "grant_type": "refresh_token", "refresh_token": t["refresh_token"]}, timeout=20)
     if r.status_code in (400, 401):
-        raise ToolError("needs_reauth", "Strava sign-in has expired. Open /strava/connect on this server.")
+        raise ToolError("needs_reauth", "Strava sign-in has expired. Connect Strava on the Stats tab.")
     r.raise_for_status()
     d = r.json()
     _save(d)
@@ -110,7 +145,7 @@ def _get(path: str, params: dict | None = None):
     except httpx.HTTPError as e:
         raise ToolError("server_unavailable", f"Couldn't reach Strava: {e}", retryable=True)
     if r.status_code == 401:
-        raise ToolError("needs_reauth", "Strava refused the sign-in. Open /strava/connect on this server.")
+        raise ToolError("needs_reauth", "Strava refused the sign-in. Connect Strava on the Stats tab.")
     if r.status_code == 429:
         raise ToolError("server_unavailable", "Strava's rate limit was reached. Try again in 15 minutes.")
     if r.status_code >= 500:

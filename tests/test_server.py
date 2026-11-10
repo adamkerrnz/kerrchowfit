@@ -45,6 +45,30 @@ def test_open_mode_must_be_asked_for(monkeypatch):
     assert c.get("/api/db/doc?path=../etc/passwd").status_code == 400
     assert c.get("/api/mcp/servers").json() == {"servers": []}
     assert c.post("/api/mcp/call", json={"server": "Strava", "tool": "list_activities"}).json()["error"]["code"] == "server_not_connected"
+    assert c.post("/api/mcp/call", json={"server": "host:Garmin_Connect", "tool": "get_user_summary"}).json()["error"]["code"] == "server_not_connected"
+    assert c.post("/api/garmin/get_user_summary", json={}).json()["error"]["code"] == "server_not_connected"
+
+
+def test_credentials_are_saved_but_never_sent_back(monkeypatch):
+    from app import garmin, store
+    c = client(monkeypatch, ALLOW_NO_LOGIN="true")
+    monkeypatch.setattr(garmin, "_exchange", lambda key: {"token": "t", "expires_at": 9e9})
+    st = c.get("/api/integrations").json()
+    assert st["garmin"] == {"configured": False, "source": None} and st["strava"]["app_configured"] is False
+
+    st = c.put("/api/integrations/garmin", json={"api_key": "gk-123"}).json()
+    assert st["garmin"] == {"configured": True, "source": "saved"} and "gk-123" not in str(st)
+    assert c.put("/api/integrations/garmin", json={"api_key": " "}).status_code == 400
+
+    assert c.put("/api/integrations/strava", json={"client_id": "abc", "client_secret": "s"}).status_code == 400
+    store.kv_put("strava_tokens", {"access_token": "a", "refresh_token": "r", "expires_at": 0})
+    st = c.put("/api/integrations/strava", json={"client_id": "123", "client_secret": "shh"}).json()
+    assert st["strava"] == {"app_configured": True, "source": "saved", "connected": False}  # a new app drops old tokens
+    assert "shh" not in str(st)
+    assert c.get("/strava/connect").status_code == 307
+
+    assert c.delete("/api/integrations/garmin").json()["garmin"]["configured"] is False
+    assert c.delete("/api/integrations/strava").json()["strava"]["app_configured"] is False
 
 
 def test_every_wording_swap_still_matches_the_page(monkeypatch, caplog):

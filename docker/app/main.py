@@ -1,8 +1,10 @@
 """KerrChow Fit server: serves the page and stands in for the claude.ai runtime it was built for.
 
-- /api/db/*   the page's saved data (check-offs, plan start, weather, Garmin snapshot) in SQLite
-- /api/mcp/*  "connector" calls for Strava and Garmin, answered by this server
-- /strava/*   one-time Strava sign-in
+- /api/db/*            the page's saved data (check-offs, plan start, weather, Garmin snapshot) in SQLite
+- /api/mcp/*           Strava "connector" calls (same shapes as the claude.ai Strava connector)
+- /api/garmin/*        Garmin Personal API data for the Stats tab
+- /api/integrations/*  Strava and Garmin credentials entered on the Stats tab
+- /strava/*            Strava sign-in (OAuth)
 """
 import base64
 import logging
@@ -33,18 +35,15 @@ NO_LOGIN_MESSAGE = (
 )
 PUBLIC_URL = os.getenv("PUBLIC_URL", "").rstrip("/")
 PATH_RE = re.compile(r"^[A-Za-z0-9_\-.~]+(/[A-Za-z0-9_\-.~]+)*$")
-SERVERS = {"Strava": strava, "host:Garmin_Connect": garmin}
+SERVERS = {"Strava": strava}
 
 # Wording in the page that only makes sense on claude.ai, swapped when served from here.
 COPY = [
     ("Strava isn't connected to your Claude account.", "Strava isn't connected yet."),
-    ("Add it in claude.ai Settings → Connectors, then refresh.", "Connect it at /strava/connect on this server, then refresh."),
-    ("Reconnect Strava in claude.ai Settings → Connectors, then refresh.", "Reconnect at /strava/connect on this server, then refresh."),
+    ("Add it in claude.ai Settings → Connectors, then refresh.", "Use Strava API setup above to connect it."),
+    ("Reconnect Strava in claude.ai Settings → Connectors, then refresh.", "Use Strava API setup above to reconnect."),
     (" The Strava connector needs an active Strava subscription.", ""),
     ("AccuWeather forecast for Auckland Central", "Open-Meteo forecast for Auckland Central"),
-    ("Garmin Connect isn't reachable here. Live data works in the Claude desktop app on the PC that runs the Garmin server.",
-     "Garmin Connect isn't signed in on this server. See the setup guide."),
-    ("From Garmin Connect on this PC", "From Garmin Connect"),
 ]
 
 
@@ -150,6 +149,18 @@ def servers():
     ]}
 
 
+def _answer(mod, tool: str, inp: dict, refresh: bool, name: str) -> dict:
+    """Run one tool and wrap the result or error the way the page expects."""
+    try:
+        payload, stored = mod.call(tool, inp or {}, refresh)
+    except ToolError as e:
+        return {"error": e.as_dict()}
+    except Exception as e:  # unexpected: log it, tell the page without crashing the section
+        log.exception("%s %s failed", name, tool)
+        return {"error": {"code": "upstream_error", "message": str(e)}}
+    return {"payload": payload, "storedAt": int(stored * 1000) if stored else None}
+
+
 @app.post("/api/mcp/call")
 def call(body: dict = Body(...)):
     name, tool = body.get("server"), body.get("tool")
@@ -158,14 +169,56 @@ def call(body: dict = Body(...)):
         return {"error": {"code": "server_not_connected", "message": f"{name} isn't set up on this server."}}
     if tool not in mod.TOOLS:
         return {"error": {"code": "not_in_manifest", "message": f"{tool} isn't available."}}
+    return _answer(mod, tool, body.get("input"), bool(body.get("refresh")), name)
+
+
+# ---------- Garmin (Personal API) ----------
+@app.post("/api/garmin/{tool}")
+def garmin_call(tool: str, body: dict = Body(default={})):
+    if not garmin.configured():
+        return {"error": {"code": "server_not_connected", "message": "Garmin isn't set up yet."}}
+    if tool not in garmin.TOOLS:
+        return {"error": {"code": "not_in_manifest", "message": f"{tool} isn't available."}}
+    return _answer(garmin, tool, body.get("input"), bool(body.get("refresh")), "Garmin")
+
+
+# ---------- credentials entered on the Stats tab (never sent back to the page) ----------
+@app.get("/api/integrations")
+def integrations():
+    return {
+        "garmin": {"configured": garmin.configured(), "source": garmin.key_source()},
+        "strava": {"app_configured": strava.app_configured(), "source": strava.app_source(), "connected": strava.configured()},
+    }
+
+
+@app.put("/api/integrations/garmin")
+def set_garmin(body: dict = Body(...)):
     try:
-        payload, stored = mod.call(tool, body.get("input") or {}, bool(body.get("refresh")))
+        garmin.save_key(body.get("api_key"))
     except ToolError as e:
-        return {"error": e.as_dict()}
-    except Exception as e:  # unexpected: log it, tell the page without crashing the section
-        log.exception("%s %s failed", name, tool)
-        return {"error": {"code": "upstream_error", "message": str(e)}}
-    return {"payload": payload, "storedAt": int(stored * 1000) if stored else None}
+        return JSONResponse({"error": e.as_dict()}, status_code=400)
+    return integrations()
+
+
+@app.delete("/api/integrations/garmin")
+def clear_garmin():
+    garmin.clear_key()
+    return integrations()
+
+
+@app.put("/api/integrations/strava")
+def set_strava(body: dict = Body(...)):
+    try:
+        strava.save_app(body.get("client_id"), body.get("client_secret"))
+    except ToolError as e:
+        return JSONResponse({"error": e.as_dict()}, status_code=400)
+    return integrations()
+
+
+@app.delete("/api/integrations/strava")
+def clear_strava():
+    strava.clear()
+    return integrations()
 
 
 @app.get("/api/debug/garmin/{name}")
@@ -196,7 +249,7 @@ def _redirect_uri(request: Request) -> str:
 @app.get("/strava/connect")
 def strava_connect(request: Request):
     if not strava.app_configured():
-        return PlainTextResponse("Set STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET on the stack first.", status_code=400)
+        return PlainTextResponse("Enter your Strava Client ID and Secret under Strava API setup on the Stats tab first.", status_code=400)
     return RedirectResponse(strava.auth_url(_redirect_uri(request), strava.new_state()))
 
 
@@ -212,7 +265,7 @@ def strava_callback(code: str | None = None, error: str | None = None, scope: st
         strava.exchange_code(code)
     except Exception as e:
         log.warning("Strava code exchange failed: %s", e)
-        return PlainTextResponse("Strava didn't accept the sign-in. Check STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET, then try /strava/connect again.", status_code=502)
+        return PlainTextResponse("Strava didn't accept the sign-in. Check the Client ID and Secret on the Stats tab, then connect again.", status_code=502)
     return RedirectResponse("/#stats")
 
 
