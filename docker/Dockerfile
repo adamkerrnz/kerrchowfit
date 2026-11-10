@@ -5,8 +5,7 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     TZ=Pacific/Auckland \
-    DB_PATH=/data/kerrchowfit.db \
-    GARMIN_TOKENS=/data/garmin-tokens
+    DB_PATH=/data/kerrchowfit.db
 
 WORKDIR /app
 COPY docker/requirements.txt .
