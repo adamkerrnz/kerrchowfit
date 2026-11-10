@@ -1,4 +1,4 @@
-"""Background schedule (replaces the scheduled Claude tasks): Garmin and the class timetable each morning, weather every 3 hours."""
+"""Background schedule: the daily refresh (app/daily.py) each morning, plus weather every 3 hours and Strava warm-ups hourly."""
 import datetime as dt
 import logging
 import os
@@ -6,10 +6,13 @@ import threading
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from . import garmin, lesmills, store, strava, weather
+from . import daily, garmin, lesmills, store, strava, weather
 
 log = logging.getLogger("jobs")
 TZ = os.getenv("TZ", "Pacific/Auckland")
+# Empty turns the built-in daily run off (e.g. when the host's cron runs `python -m app.daily` instead).
+# GARMIN_REFRESH_TIME is the older name for the same setting.
+DAILY_TIME = os.getenv("DAILY_REFRESH_TIME", os.getenv("GARMIN_REFRESH_TIME", "05:40")).strip()
 _sched: BackgroundScheduler | None = None
 
 
@@ -24,15 +27,13 @@ def _safe(fn, name):
 
 def start() -> None:
     global _sched
-    hh, mm = (os.getenv("GARMIN_REFRESH_TIME", "05:45").split(":") + ["0"])[:2]
     _sched = BackgroundScheduler(timezone=TZ)
-    # Always scheduled: the key can be entered on the Stats tab after start-up; the job skips itself until then.
-    _sched.add_job(_safe(garmin.snapshot, "garmin snapshot"), "cron", hour=int(hh), minute=int(mm), id="garmin")
+    if DAILY_TIME:
+        hh, mm = (DAILY_TIME.split(":") + ["0"])[:2]
+        # Weather, classes, Garmin, Strava and cache clean-up; tasks that aren't set up yet skip themselves.
+        _sched.add_job(_safe(daily.run, "daily refresh"), "cron", hour=int(hh), minute=int(mm), id="daily")
     _sched.add_job(_safe(weather.refresh, "weather"), "cron", hour="*/3", minute=5, id="weather")
     _sched.add_job(_safe(strava.warm_best_efforts, "strava best efforts"), "cron", minute=20, id="strava")
-    if lesmills.enabled():
-        _sched.add_job(_safe(lesmills.refresh, "les mills timetable"), "cron", hour=4, minute=50, id="lesmills")
-    _sched.add_job(_safe(prune, "cache clean-up"), "cron", hour=3, minute=30, id="prune")
     _sched.start()
 
     def first_run():  # fill anything missing straight after a (re)deploy

@@ -72,7 +72,8 @@ def merge_past(new_days: dict, old_days: dict, today: str) -> dict:
     return {**kept, **new_days}
 
 
-def refresh() -> None:
+def refresh() -> bool:
+    """Fetch and save the forecast; False if the weather service could not be reached."""
     try:
         r = httpx.get("https://api.open-meteo.com/v1/forecast", params={
             "latitude": LAT, "longitude": LON, "timezone": TZ, "forecast_days": 10, "wind_speed_unit": "kmh",
@@ -82,9 +83,10 @@ def refresh() -> None:
         days = daytime_days(r.json()["hourly"])
     except Exception as e:
         log.warning("weather refresh failed: %s", e)
-        return
+        return False
     today = dt.datetime.now(ZoneInfo(TZ)).date().isoformat()
     old = store.doc_get(DOC) or {}
     days = merge_past(days, old.get("days"), today)
     store.doc_set(DOC, {"days": days, "alerts": {}, "fetchedAt": int(time.time() * 1000), "source": "open-meteo"})
     log.info("weather saved for %d days", len(days))
+    return True
