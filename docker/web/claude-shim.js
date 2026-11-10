@@ -20,17 +20,19 @@
 
   // ---------- live updates: every listener re-reads on a timer, when the tab returns, and after any local write ----------
   const listeners = new Set();
-  const refreshAll = () => listeners.forEach((fn) => fn());
-  setInterval(() => { if (!document.hidden) refreshAll(); }, POLL_MS);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshAll(); });
+  let epoch = 0; // bumped by every local write, so a read that started before the write can't overwrite it
+  const refreshAll = () => { epoch++; listeners.forEach((fn) => fn()); };
+  const pollAll = () => listeners.forEach((fn) => fn());
+  setInterval(() => { if (!document.hidden) pollAll(); }, POLL_MS);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) pollAll(); });
 
   function watch(read, cb, onError) {
     let last = null, stopped = false;
-    const tick = () => read().then((snap) => {
-      if (stopped) return;
+    const tick = () => { const started = epoch; return read().then((snap) => {
+      if (stopped || started !== epoch) return; // stale: a write landed while this read was in flight
       const key = JSON.stringify(snap.__key);
       if (key !== last) { last = key; cb(snap); }
-    }, (e) => { if (!stopped && onError) onError(e); });
+    }, (e) => { if (!stopped && onError) onError(e); }); };
     listeners.add(tick);
     tick();
     return () => { stopped = true; listeners.delete(tick); };

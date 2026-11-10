@@ -12,9 +12,11 @@ services:
       - "${HOST_PORT:-8088}:8000"
     environment:
       TZ: ${TZ:-Pacific/Auckland}
-      # Login for the whole site (strongly recommended: this is health data)
+      # Login for the whole site. Required: without it the server refuses every request (this is health data).
       BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
       BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
+      # Only if you really want no login, on a network nobody else can reach
+      ALLOW_NO_LOGIN: ${ALLOW_NO_LOGIN:-false}
       # The address you open the app at, e.g. http://192.168.1.50:8088 (used for the Strava sign-in redirect)
       PUBLIC_URL: ${PUBLIC_URL:-}
       # Strava API app from https://www.strava.com/settings/api
@@ -28,6 +30,9 @@ services:
       # Forecast location (default: Auckland Central)
       WEATHER_LAT: ${WEATHER_LAT:--36.8485}
       WEATHER_LON: ${WEATHER_LON:-174.7633}
+      # Les Mills club for the morning class details (01 = Auckland City; empty turns the daily check off)
+      LESMILLS_CLUB: ${LESMILLS_CLUB-01}
+      LESMILLS_TIME: ${LESMILLS_TIME:-07:10}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - kerrchowfit-data:/data

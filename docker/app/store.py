@@ -43,9 +43,17 @@ def doc_set(path: str, data: dict) -> None:
 
 
 def doc_merge(path: str, data: dict) -> None:
-    cur = doc_get(path) or {}
-    cur.update(data)
-    doc_set(path, cur)
+    """Shallow-merge into a document. Read and write happen under one lock so two merges can't lose each other."""
+    with _lock:
+        row = _db().execute("SELECT data FROM docs WHERE path = ?", (path,)).fetchone()
+        cur = json.loads(row[0]) if row else {}
+        cur.update(data)
+        _db().execute(
+            "INSERT INTO docs (path, data, updated) VALUES (?, ?, ?) "
+            "ON CONFLICT(path) DO UPDATE SET data = excluded.data, updated = excluded.updated",
+            (path, json.dumps(cur), time.time()),
+        )
+        _db().commit()
 
 
 def doc_delete(path: str) -> None:
@@ -58,7 +66,7 @@ def collection(path: str) -> list[dict]:
     """Documents directly inside a collection, e.g. 'progress' -> progress/w1, progress/w2."""
     prefix = path.rstrip("/") + "/"
     with _lock:
-        rows = _db().execute("SELECT path, data FROM docs WHERE path LIKE ?", (prefix + "%",)).fetchall()
+        rows = _db().execute("SELECT path, data FROM docs WHERE substr(path, 1, ?) = ?", (len(prefix), prefix)).fetchall()
     out = []
     for p, d in rows:
         rest = p[len(prefix):]
@@ -99,3 +107,19 @@ def cache_get(key: str, max_age: float | None):
 
 def cache_put(key: str, value) -> float:
     return kv_put(key, value)
+
+
+def kv_delete(key: str) -> None:
+    with _lock:
+        _db().execute("DELETE FROM kv WHERE key = ?", (key,))
+        _db().commit()
+
+
+def kv_prune(prefix: str, older_than_seconds: float) -> int:
+    """Delete cache rows whose key starts with prefix and that were stored longer ago than the given age."""
+    cutoff = time.time() - older_than_seconds
+    with _lock:
+        # substr() rather than LIKE: keys contain ':' and '_' and must match literally.
+        cur = _db().execute("DELETE FROM kv WHERE substr(key, 1, ?) = ? AND stored < ?", (len(prefix), prefix, cutoff))
+        _db().commit()
+    return cur.rowcount

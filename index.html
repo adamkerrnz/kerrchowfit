@@ -586,6 +586,8 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 .view { position: relative; z-index: 1; }
 .stats .wrap { padding-block: 20px 24px; display: flex; flex-direction: column; gap: 28px; }
 .stats .strava { margin-top: 0; }
+
+.ex-retest { margin: 0 -14px; padding: 8px 14px; background: #FFF3E6; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-2); }
 </style>
 </head>
 <body>
@@ -1201,7 +1203,7 @@ window.FIGURES = (function () {
 
   // ---------- state ----------
   const DEFAULT_START = "2026-11-09"; // Monday the plan began
-  const state = { week: ls.get("tp-week") || null, progress: {}, mode: "connecting", note: "Connecting…", start: DEFAULT_START };
+  const state = { week: ls.get("tp-week") || null, progress: {}, mode: "connecting", note: "Connecting…", start: DEFAULT_START, classes: null };
   const validDate = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
   function dayDate(w, i) {
     const [y, m, d] = state.start.split("-").map(Number);
@@ -1209,6 +1211,7 @@ window.FIGURES = (function () {
   }
   function todayMidnight() { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
   // A day is missed once its date has passed without being marked done.
+  const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const isMissed = (w, i) => !weekData(w).days[DAY_KEYS[i]] && dayDate(w, i) < todayMidnight();
   const missedCount = (w) => DAY_KEYS.filter((_, i) => isMissed(w, i)).length;
   const blankWeek = () => ({ days: {}, a: SESSIONS.a.exercises.map(() => false), b: SESSIONS.b.exercises.map(() => false) });
@@ -1279,6 +1282,13 @@ window.FIGURES = (function () {
     paint();
     let first = true;
     const timer = setTimeout(() => { state.note = "Can't reach saved progress yet. Changes will sync when it connects."; paint(); }, 10000);
+    db.doc("classes/lesmills").onSnapshot(
+      (snap) => {
+        const v = snap.exists ? snap.data() : null;
+        if (v && v.days) { state.classes = v; paint(); }
+      },
+      () => {}
+    );
     db.doc("settings/plan").onSnapshot(
       (snap) => {
         const v = snap.exists ? snap.data().start : null;
@@ -1394,16 +1404,18 @@ window.FIGURES = (function () {
     doneBtn.onclick = () => toggleDay(d.key);
 
     const body = h("div", { class: "day-body" }, h("div", { class: "day-detail" }, d.detail));
+    // Class details: filled in paint() from the saved timetable for that date, else the typical class in d.cls.
+    let cls = null;
     if (d.cls) {
-      const c = d.cls;
+      cls = { time: h("strong"), mins: h("span"), name: h("div", { class: "cls-name" }), place: h("div", { class: "cls-meta" }),
+        who: h("strong"), alt: h("div", { class: "cls-alt" }), src: h("span") };
       body.append(h("div", { class: "cls" },
-        h("div", { class: "cls-time" }, h("strong", null, c.time), h("span", null, `${c.mins} min`)),
+        h("div", { class: "cls-time" }, cls.time, cls.mins),
         h("div", { class: "cls-main" },
-          h("div", { class: "cls-name" }, c.name),
-          h("div", { class: "cls-meta" }, `${c.studio} · Les Mills Auckland City`),
-          h("div", { class: "cls-meta" }, "Instructor: ", h("strong", null, c.instructor)),
-          h("div", { class: "cls-alt" }, `Earlier option: ${c.alt}`),
-          h("div", { class: "cls-src" }, "From the Les Mills timetable on 9 Nov 2026. Instructors can change, so ",
+          cls.name, cls.place,
+          h("div", { class: "cls-meta" }, "Instructor: ", cls.who),
+          cls.alt,
+          h("div", { class: "cls-src" }, cls.src,
             h("a", { href: "https://www.lesmills.co.nz/timetable?club=01", target: "_blank", rel: "noopener" }, "check the live timetable"), "."))));
     }
     const noteEls = [];
@@ -1469,7 +1481,9 @@ window.FIGURES = (function () {
       const list = body.querySelector(".ex-list");
       const finale = h("div", { class: "ex-finale", role: "status" });
       list.after(finale);
-      ex = { s, count, col, bar, rows, list, finale };
+      const retest = h("div", { class: "ex-retest" }, "Retest week: the plan doesn't set strength work for week 12. These are the wk 5–11 sets, shown as a guide.");
+      list.before(retest);
+      ex = { s, count, col, bar, rows, list, finale, retest };
     }
 
     body.id = `${d.key}-details`;
@@ -1480,16 +1494,17 @@ window.FIGURES = (function () {
       paint();
     };
 
+    const titleEl = h("h2", { class: "display day-title" }, d.title);
     const card = h("li", { class: "day", id: d.key, style: { "--c": color } },
       h("div", { class: "day-head" },
         h("div", { class: "day-id" },
           h("span", { class: "day-name" }, d.name.toUpperCase()),
-          h("h2", { class: "display day-title" }, d.title),
+          titleEl,
           dots(EFFORT[d.effort], "#fff", `Effort: ${d.effort}`)),
         moreBtn,
         doneBtn),
       body);
-    return { d, card, body, moreBtn, doneBtn, doneLabel, noteEls, ex };
+    return { d, card, body, moreBtn, doneBtn, doneLabel, noteEls, ex, cls, titleEl };
   });
   document.getElementById("days").append(...cards.map((c) => c.card));
 
@@ -1537,6 +1552,22 @@ window.FIGURES = (function () {
       c.doneBtn.setAttribute("aria-pressed", String(on));
       c.doneBtn.disabled = !writable;
       c.doneLabel.textContent = on ? "Done" : "Mark done";
+      if (c.cls) {
+        const saved = state.classes && state.classes.days && state.classes.days[isoDate(dayDate(w, DAY_KEYS.indexOf(c.d.key)))];
+        const k = saved || c.d.cls;
+        c.titleEl.textContent = saved ? k.name : c.d.title;
+        c.cls.time.textContent = k.time;
+        c.cls.mins.textContent = `${k.mins} min`;
+        c.cls.name.textContent = k.name;
+        c.cls.place.textContent = `${k.studio} · Les Mills ${(saved && state.classes.club) || "Auckland City"}`;
+        c.cls.who.textContent = k.instructor || "to be confirmed";
+        c.cls.alt.hidden = !k.alt;
+        c.cls.alt.textContent = k.alt ? `Earlier option: ${k.alt}` : "";
+        const checked = saved && new Date(state.classes.fetchedAt);
+        c.cls.src.textContent = saved
+          ? `From the Les Mills timetable${checked && !isNaN(checked) ? `, checked ${checked.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}` : ""}. Instructors can change, so `
+          : "The usual class, from the timetable on 9 Nov 2026. This date isn't in the saved timetable, so ";
+      }
       // Done days collapse to their header; the chevron opens them again.
       const open = !on || expanded.has(c.d.key);
       c.body.hidden = !open;
@@ -1588,6 +1619,7 @@ window.FIGURES = (function () {
         const allDone = ticks.every(Boolean);
         c.ex.finale.hidden = !allDone;
         c.ex.finale.textContent = allDone ? `All ${ticks.length} cleared. ${c.d.title} done for week ${w}.` : "";
+        c.ex.retest.hidden = w !== WEEKS;
       }
     }
   }
@@ -1888,11 +1920,13 @@ window.FIGURES = (function () {
     } else tiles.push(tileError("PRs, last 4 weeks", actsR.reason));
     if (bestR.status === "fulfilled") {
       const efforts = (bestR.value.payload && bestR.value.payload.efforts) || [];
+      // Strava's connector reports all-time bests; the self-hosted server reports the last 12 months and says so.
+      const span = bestR.value.payload && bestR.value.payload.all_time === false ? `, ${bestR.value.payload.window_months || 12} mo` : "";
       const pw = efforts.find((e) => e.best_effort_type === "GreatestPower20min");
       const k5 = efforts.find((e) => e.best_effort_type === "Fastest5k");
       const when = (e) => e.date ? new Date(e.date + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "numeric" }) : "";
-      tiles.push(pw ? tile("Best 20-min power", `${pw.value} W`, when(pw)) : tile("Best 20-min power", "–", "No power data yet"));
-      tiles.push(k5 ? tile("Fastest 5K", fmtClock(k5.value), when(k5)) : tile("Fastest 5K", "–", "No 5K yet"));
+      tiles.push(pw ? tile(`Best 20-min power${span}`, `${pw.value} W`, when(pw)) : tile(`Best 20-min power${span}`, "–", "No power data yet"));
+      tiles.push(k5 ? tile(`Fastest 5K${span}`, fmtClock(k5.value), when(k5)) : tile(`Fastest 5K${span}`, "–", "No 5K yet"));
     } else { tiles.push(tileError("Best 20-min power", bestR.reason)); tiles.push(tileError("Fastest 5K", bestR.reason)); }
     $("st-tiles").replaceChildren(...tiles);
 
@@ -2483,6 +2517,10 @@ window.FIGURES = (function () {
   async function start() {
     const use = (n) => Promise.resolve(window.claude?.use?.(n) ?? null).catch(() => null);
     [db, user, mcp, perms] = await Promise.all([use("db"), use("user"), use("mcp"), use("permissions")]);
+    // Health data is kept to the plan's owner and editors: the saved snapshot isn't readable by anyone else.
+    let owner = true;
+    try { if (user) owner = (await user.canEdit()) !== false; } catch (e) {}
+    if (!owner) { setStatus("Garmin data is private to the plan's owner.", false); return; }
     if (db) watchSaved();
     setTimeout(() => {
       if (current || busy) return;

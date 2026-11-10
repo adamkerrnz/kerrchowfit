@@ -16,13 +16,21 @@ from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import garmin, jobs, store, strava
+from . import garmin, jobs, lesmills, store, strava, weather
 from .errors import ToolError
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("app")
 WEB = Path(__file__).resolve().parent.parent / "web"
 AUTH_USER, AUTH_PASS = os.getenv("BASIC_AUTH_USER", ""), os.getenv("BASIC_AUTH_PASSWORD", "")
+# Health data sits behind this server, so it refuses to run without a login unless that is asked for outright.
+ALLOW_NO_LOGIN = os.getenv("ALLOW_NO_LOGIN", "").strip().lower() in ("1", "true", "yes")
+LOGIN_SET = bool(AUTH_USER and AUTH_PASS)
+NO_LOGIN_MESSAGE = (
+    "KerrChow Fit is not set up yet: no site login is configured.\n\n"
+    "Set BASIC_AUTH_USER and BASIC_AUTH_PASSWORD on the stack and redeploy.\n"
+    "To run without a login on a network only you can reach, set ALLOW_NO_LOGIN=true instead.\n"
+)
 PUBLIC_URL = os.getenv("PUBLIC_URL", "").rstrip("/")
 PATH_RE = re.compile(r"^[A-Za-z0-9_\-.~]+(/[A-Za-z0-9_\-.~]+)*$")
 SERVERS = {"Strava": strava, "host:Garmin_Connect": garmin}
@@ -41,8 +49,13 @@ COPY = [
 
 
 def _page() -> str:
-    html = (WEB / "index.html").read_text(encoding="utf-8")
+    src = WEB / "index.html"  # copied in by the Dockerfile
+    if not src.exists():  # running from a checkout (tests, local development)
+        src = WEB.parent.parent / "index.html"
+    html = src.read_text(encoding="utf-8")
     for old, new in COPY:
+        if old not in html:  # the page's wording changed: say so instead of silently serving claude.ai copy
+            log.warning("page wording not found, so it was not swapped: %r", old)
         html = html.replace(old, new)
     # The shim must run before the page's own scripts: it provides window.claude.
     return html.replace("<head>", '<head>\n<script src="claude-shim.js"></script>', 1)
@@ -50,6 +63,8 @@ def _page() -> str:
 
 @asynccontextmanager
 async def lifespan(_app):
+    if not LOGIN_SET:
+        log.warning("No site login is set. %s", "Running open because ALLOW_NO_LOGIN is on." if ALLOW_NO_LOGIN else "Every request is refused until BASIC_AUTH_USER and BASIC_AUTH_PASSWORD are set.")
     jobs.start()
     yield
     jobs.stop()
@@ -61,7 +76,11 @@ PAGE = _page()
 
 @app.middleware("http")
 async def basic_auth(request: Request, call_next):
-    if AUTH_USER and AUTH_PASS and request.url.path != "/healthz":
+    if request.url.path == "/healthz":
+        return await call_next(request)
+    if not LOGIN_SET and not ALLOW_NO_LOGIN:
+        return PlainTextResponse(NO_LOGIN_MESSAGE, status_code=503)
+    if LOGIN_SET:
         ok = False
         header = request.headers.get("authorization", "")
         if header.startswith("Basic "):
@@ -160,9 +179,8 @@ def garmin_raw(name: str, date: str | None = None):
 
 @app.post("/api/jobs/{name}")
 def run_job(name: str):
-    """Run a background job now: garmin or weather."""
-    from . import weather
-    jobs_by_name = {"garmin": garmin.snapshot, "weather": weather.refresh}
+    """Run a background job now: garmin, weather or lesmills."""
+    jobs_by_name = {"garmin": garmin.snapshot, "weather": weather.refresh, "lesmills": lesmills.refresh}
     if name not in jobs_by_name:
         raise HTTPException(404)
     jobs_by_name[name]()
@@ -179,16 +197,22 @@ def _redirect_uri(request: Request) -> str:
 def strava_connect(request: Request):
     if not strava.app_configured():
         return PlainTextResponse("Set STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET on the stack first.", status_code=400)
-    return RedirectResponse(strava.auth_url(_redirect_uri(request)))
+    return RedirectResponse(strava.auth_url(_redirect_uri(request), strava.new_state()))
 
 
 @app.get("/strava/callback")
-def strava_callback(code: str | None = None, error: str | None = None, scope: str = ""):
+def strava_callback(code: str | None = None, error: str | None = None, scope: str = "", state: str | None = None):
     if error or not code:
         return PlainTextResponse(f"Strava sign-in was cancelled ({error or 'no code'}).", status_code=400)
+    if not strava.check_state(state):
+        return PlainTextResponse("This Strava sign-in didn't start here, or it took longer than 10 minutes. Open /strava/connect and try again.", status_code=400)
     if "activity:read" not in scope:
         return PlainTextResponse("Please allow access to your activities (tick 'View data about your activities'). Go back and try /strava/connect again.", status_code=400)
-    strava.exchange_code(code)
+    try:
+        strava.exchange_code(code)
+    except Exception as e:
+        log.warning("Strava code exchange failed: %s", e)
+        return PlainTextResponse("Strava didn't accept the sign-in. Check STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET, then try /strava/connect again.", status_code=502)
     return RedirectResponse("/#stats")
 
 

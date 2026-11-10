@@ -6,6 +6,8 @@ list_activities, get_active_streak, get_athlete_best_efforts.
 import datetime as dt
 import logging
 import os
+import secrets
+import threading
 import time
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
@@ -42,10 +44,29 @@ def app_configured() -> bool:
     return bool(CLIENT_ID and CLIENT_SECRET)
 
 
-def auth_url(redirect_uri: str) -> str:
+STATE_TTL = 10 * 60  # seconds a sign-in may take
+
+
+def new_state() -> str:
+    """A one-time value sent to Strava and checked on the way back, so only a sign-in started here is accepted."""
+    state = secrets.token_urlsafe(24)
+    store.kv_put(f"strava:state:{state}", True)
+    return state
+
+
+def check_state(state: str | None) -> bool:
+    if not state:
+        return False
+    key = f"strava:state:{state}"
+    hit = store.cache_get(key, STATE_TTL)
+    store.kv_delete(key)  # single use
+    return bool(hit)
+
+
+def auth_url(redirect_uri: str, state: str) -> str:
     return "https://www.strava.com/oauth/authorize?" + urlencode({
         "client_id": CLIENT_ID, "redirect_uri": redirect_uri, "response_type": "code",
-        "approval_prompt": "auto", "scope": "read,activity:read_all",
+        "approval_prompt": "auto", "scope": "read,activity:read_all", "state": state,
     })
 
 
@@ -59,7 +80,16 @@ def exchange_code(code: str) -> None:
     _save(r.json())
 
 
+_token_lock = threading.Lock()
+
+
 def _access_token() -> str:
+    # One refresh at a time: the page makes three calls at once, and they would otherwise all refresh together.
+    with _token_lock:
+        return _access_token_locked()
+
+
+def _access_token_locked() -> str:
     t = _tokens()
     if not t:
         raise ToolError("server_not_connected", "Strava isn't connected yet. Open /strava/connect on this server.")
@@ -237,7 +267,8 @@ def get_athlete_best_efforts(inp: dict, refresh: bool):
         efforts.append({"best_effort_type": "GreatestPower20min", "value": best[0], "sport": "Ride", "date": best[1]["start_date_local"][:10]})
     if budget[0] <= 0:
         log.info("best efforts: fetch budget used up; the rest are filled in on later calls")
-    return {"efforts": efforts}, stored
+    # all_time is false here: these are the best in the last 12 months, and the page labels them that way.
+    return {"efforts": efforts, "all_time": False, "window_months": 12}, stored
 
 
 def warm_best_efforts() -> None:
