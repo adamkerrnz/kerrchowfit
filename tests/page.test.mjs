@@ -32,7 +32,7 @@ test("the page still contains the wording the self-hosted server swaps", () => {
   const main = readFileSync(new URL("../docker/app/main.py", import.meta.url), "utf8");
   const block = main.slice(main.indexOf("COPY = ["), main.indexOf("\n]\n", main.indexOf("COPY = [")));
   const olds = [...block.matchAll(/^\s*\(\s*"((?:[^"\\]|\\.)*)"\s*,/gm)].map((m) => m[1]);
-  assert.ok(olds.length >= 5);
+  assert.ok(olds.length >= 4);
   for (const text of olds) assert.ok(html.includes(text), `page no longer contains: ${text}`);
 });
 

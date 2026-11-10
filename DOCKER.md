@@ -8,7 +8,7 @@ This runs KerrChow Fit on your own Docker host instead of claude.ai. It uses the
 | Artifact storage (check-offs, plan start, weather, Garmin snapshot) | SQLite file on the `kerrchowfit-data` volume |
 | Strava connector | Strava's own API, through your own Strava API app (no Strava subscription needed) |
 | (no Garmin source on claude.ai) | Garmin's official Connect Personal API, with a Personal API key entered on the Stats tab |
-| AccuWeather connector + scheduled Claude task | Open-Meteo daytime forecast (free, no key), in the daily refresh and every 3 hours |
+| Open-Meteo forecast and MetService warnings, saved by a scheduled Claude task running `docker/app/forecast.py` | Open-Meteo daytime forecast (free, no key), in the daily refresh and every 3 hours |
 | Les Mills class details from the scheduled Claude task | Club timetable check in the daily refresh |
 | — | Garmin snapshot in the daily refresh |
 | claude.ai sign-in | Username and password for the whole site (required) |
@@ -192,8 +192,8 @@ docker compose up -d --build
   rate limit (100 requests per 15 minutes).
 - **Garmin** uses the official Connect Personal API, which covers daily summaries, HRV and sleep. Training readiness,
   training status, load focus and VO2 max aren't part of it, so the Stats tab doesn't show them.
-- **Weather** comes from Open-Meteo, not AccuWeather. Each day is summed up over 7 am to 7 pm, like AccuWeather's
-  daytime forecast. Open-Meteo carries no official warnings, so MetService watches and warnings don't show.
+- **Weather** comes from Open-Meteo (free, open data, no key). Each day is summed up over 7 am to 7 pm, the hours
+  training happens in. Open-Meteo carries no official warnings, so MetService watches and warnings don't show.
 - **Les Mills class details** come from the data feed behind the club's public timetable page, checked once a day.
   It isn't an official API: if Les Mills changes it, the page falls back to the usual class and says so.
 - **Check-offs** start empty. Progress saved on claude.ai stays there; it isn't copied across.

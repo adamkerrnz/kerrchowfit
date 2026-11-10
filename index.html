@@ -2046,7 +2046,8 @@ window.FIGURES = (function () {
 </script>
 <script>
 (function () {
-  // Weather: reads the forecast saved with the page (weather/auckland), refreshed daily from AccuWeather by a scheduled Claude task.
+  // Weather: reads the forecast saved with the page (weather/auckland), refreshed from Open-Meteo (free, open data):
+  // by a scheduled Claude task on claude.ai, by the server when self-hosted.
   const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
   const OUTDOOR = { mon: "run", fri: "run", sun: "ride" }; // other days are indoor sessions
   const ICON = {
@@ -2136,7 +2137,7 @@ window.FIGURES = (function () {
     });
     const when = new Date(saved.fetchedAt);
     const fetched = isNaN(when) ? "" : ` fetched ${when.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} ${when.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
-    statusEl.textContent = covered ? `AccuWeather forecast for Auckland Central,${fetched}.` : `No forecast for this week: it covers about 10 days ahead (last${fetched || " fetch unknown"}).`;
+    statusEl.textContent = covered ? `Open-Meteo forecast for Auckland Central,${fetched}.` : `No forecast for this week: it covers about 10 days ahead (last${fetched || " fetch unknown"}).`;
   }
   window.__weatherPaint = paint;
 

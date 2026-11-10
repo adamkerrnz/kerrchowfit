@@ -43,7 +43,6 @@ COPY = [
     ("Add it in claude.ai Settings → Connectors, then refresh.", "Use Strava API setup above to connect it."),
     ("Reconnect Strava in claude.ai Settings → Connectors, then refresh.", "Use Strava API setup above to reconnect."),
     (" The Strava connector needs an active Strava subscription.", ""),
-    ("AccuWeather forecast for Auckland Central", "Open-Meteo forecast for Auckland Central"),
 ]
 
 
