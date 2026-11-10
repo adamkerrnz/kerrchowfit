@@ -10,7 +10,8 @@ import sys
 src = open("index.html", encoding="utf-8").read()
 head = src[src.index("<title>"):src.index("</head>")]
 body = src[src.index("<body>") + len("<body>"):src.index("</body>")]
-head = head.replace("</title>", '</title>\n<meta name="claude:viewport-fit-sides" content="cover">', 1)
+if "claude:viewport-fit-sides" not in head:
+    head = head.replace("</title>", '</title>\n<meta name="claude:viewport-fit-sides" content="cover">', 1)
 out = sys.argv[1] if len(sys.argv) > 1 else "artifact.html"
 open(out, "w", encoding="utf-8").write(head.strip() + "\n" + body.strip() + "\n")
 print(f"wrote {out}")
