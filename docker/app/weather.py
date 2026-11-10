@@ -23,7 +23,7 @@ COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "
 
 
 def _summary(prob, mm, hrs, wind, gust, deg, code):
-    """Same fields and thresholds as the page's own summarise() for AccuWeather."""
+    """The fields the page reads from weather/auckland, with the same thresholds the claude.ai weather refresh uses."""
     prob, mm, hrs, wind, gust = prob or 0, round(mm or 0, 1), round(hrs or 0), round(wind or 0), round(gust or 0)
     rain = ("heavy" if mm >= 10 else "rain") if prob >= 50 and (mm >= 1 or hrs >= 1) else "maybe" if prob >= 30 else "dry"
     windy = "windy" if wind >= 30 or gust >= 50 else "breezy" if wind >= 20 or gust >= 40 else "calm"

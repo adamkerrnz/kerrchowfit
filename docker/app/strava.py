@@ -161,11 +161,14 @@ def get_active_streak(inp: dict, refresh: bool):
     this_week = _monday(dt.datetime.now(TZ).date())
     pending = weeks.get(this_week, 0) == 0
     wk, length = this_week - dt.timedelta(weeks=1) if pending else this_week, 0
+    count = 0
     while weeks.get(wk, 0) > 0:
         length += 1
+        count += weeks[wk]
         wk -= dt.timedelta(weeks=1)
-    return {"length": length, "streak_status": "Pending" if pending else "Active",
-            "valid_activity_count": weeks.get(this_week, 0)}, stored
+    # valid_activity_count is the number of activities across the whole streak, as the claude.ai connector reports it.
+    return {"length": length, "streak_status": "Pending" if pending else "Ongoing",
+            "valid_activity_count": count}, stored
 
 
 # ---------- best efforts (last 12 months) ----------

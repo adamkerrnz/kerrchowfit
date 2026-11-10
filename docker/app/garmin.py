@@ -215,8 +215,14 @@ def vo2_trend(start: str, end: str, refresh: bool):
     """Daily VO2 max, kept in the database so each day is only fetched once (the first call backfills ~8 weeks)."""
     days = list(_days(start, end))
     per_day, oldest = {}, None
+    today = _today()
     for day in days:
-        hit = store.cache_get(f"garmin:vo2:{day}", TODAY_TTL if day >= _today() else None)  # past days never expire
+        hit = store.cache_get(f"garmin:vo2:{day}", TODAY_TTL if day >= today else None)
+        if hit and day < today:
+            # A past day is final only if it was fetched after that day ended; otherwise fetch it once more.
+            day_end = dt.datetime.combine(dt.date.fromisoformat(day) + dt.timedelta(days=1), dt.time(), TZ).timestamp()
+            if hit[1] < day_end:
+                hit = None
         if hit and not (refresh and day == end):
             v, stored = hit
         else:

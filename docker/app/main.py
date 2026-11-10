@@ -189,7 +189,7 @@ def strava_callback(code: str | None = None, error: str | None = None, scope: st
     if "activity:read" not in scope:
         return PlainTextResponse("Please allow access to your activities (tick 'View data about your activities'). Go back and try /strava/connect again.", status_code=400)
     strava.exchange_code(code)
-    return RedirectResponse("/#strava")
+    return RedirectResponse("/#stats")
 
 
 app.mount("/", StaticFiles(directory=WEB), name="web")
