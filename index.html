@@ -634,10 +634,31 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 <h2 class="display st-title" id="gm-title">Body &amp; readiness</h2>
 </div>
 <div class="st-actions">
+<button type="button" class="st-btn" id="gm-config-btn" style="border-color: rgba(255,255,255,0.2);">Garmin API Setup</button>
 <button type="button" class="st-btn st-btn--primary" id="gm-live" hidden>Get live data</button>
 <button type="button" class="st-btn" id="gm-refresh" hidden>Refresh</button>
 </div>
 </div>
+<dialog id="gm-modal" style="background: #212428; color: #EDEFF2; border: 1px solid #41464D; border-radius: 12px; max-width: 480px; width: 90%; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.7);">
+  <form method="dialog" id="gm-form">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #fff;">Garmin Developer / Personal API</h3>
+      <button type="button" id="gm-modal-close" style="background: none; border: none; color: #9AA0A8; font-size: 22px; cursor: pointer; line-height: 1;">&times;</button>
+    </div>
+    <p style="font-size: 13px; color: #B8BDC4; line-height: 1.5; margin-bottom: 14px;">
+      Connect your Garmin account using Garmin's official <strong>Personal API Key</strong> (from <a href="https://connect.garmin.com" target="_blank" rel="noopener" style="color: #FF8A1F; text-decoration: underline;">Garmin Connect Web</a> &rarr; <em>Profile &amp; Account &rarr; Settings &rarr; Personal API Key</em>).
+    </p>
+    <div style="margin-bottom: 14px;">
+      <label for="gm-key-input" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #9AA0A8; margin-bottom: 6px;">Personal API Key</label>
+      <input type="password" id="gm-key-input" placeholder="Paste your Garmin Personal API Key" style="width: 100%; box-sizing: border-box; background: #16181B; border: 1px solid #41464D; color: #fff; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 13px;">
+    </div>
+    <div id="gm-config-msg" style="font-size: 12px; margin-bottom: 14px; display: none; padding: 8px 10px; border-radius: 6px;"></div>
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button type="button" id="gm-modal-cancel" class="st-btn">Cancel</button>
+      <button type="button" id="gm-modal-save" class="st-btn st-btn--primary">Save &amp; Connect</button>
+    </div>
+  </form>
+</dialog>
 <div class="gm-bar"><span class="gm-chip" id="gm-source" hidden></span><span class="status" id="gm-status" role="status">Loading Garmin data…</span></div>
 <div class="st-body" id="gm-body" hidden>
 <div class="st-tiles" id="gm-tiles"></div>
@@ -2508,6 +2529,77 @@ window.FIGURES = (function () {
 
   $("gm-live").onclick = () => loadLive(false);
   $("gm-refresh").onclick = () => loadLive(true);
+
+  const gmModal = $("gm-modal");
+  const gmMsg = $("gm-config-msg");
+  if ($("gm-config-btn") && gmModal) {
+    $("gm-config-btn").onclick = () => {
+      fetch("/api/garmin/status").then(r => r.json()).then(st => {
+        if (st.hasApiKey) {
+          $("gm-key-input").placeholder = "Personal API Key configured (paste new key to update)";
+        }
+      }).catch(() => {});
+      if (gmMsg) gmMsg.style.display = "none";
+      gmModal.showModal();
+    };
+  }
+  if ($("gm-modal-close") && gmModal) $("gm-modal-close").onclick = () => gmModal.close();
+  if ($("gm-modal-cancel") && gmModal) $("gm-modal-cancel").onclick = () => gmModal.close();
+  if ($("gm-modal-save") && gmModal) {
+    $("gm-modal-save").onclick = async () => {
+      const key = $("gm-key-input").value.trim();
+      if (!key) {
+        if (gmMsg) {
+          gmMsg.textContent = "Please enter your Garmin Personal API Key.";
+          gmMsg.style.display = "block";
+          gmMsg.style.background = "rgba(229,72,77,0.2)";
+          gmMsg.style.color = "#FF8080";
+        }
+        return;
+      }
+      $("gm-modal-save").disabled = true;
+      $("gm-modal-save").textContent = "Connecting…";
+      if (gmMsg) gmMsg.style.display = "none";
+      try {
+        const res = await fetch("/api/garmin/configure", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey: key })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          if (gmMsg) {
+            gmMsg.textContent = "Connected successfully! Fetching live Garmin data…";
+            gmMsg.style.display = "block";
+            gmMsg.style.background = "rgba(43,182,115,0.2)";
+            gmMsg.style.color = "#4ADE80";
+          }
+          setTimeout(() => {
+            gmModal.close();
+            loadLive(true);
+          }, 900);
+        } else {
+          if (gmMsg) {
+            gmMsg.textContent = data.error || "Connection failed. Please check your Personal API key.";
+            gmMsg.style.display = "block";
+            gmMsg.style.background = "rgba(229,72,77,0.2)";
+            gmMsg.style.color = "#FF8080";
+          }
+        }
+      } catch (err) {
+        if (gmMsg) {
+          gmMsg.textContent = "Network error while connecting to Garmin API.";
+          gmMsg.style.display = "block";
+          gmMsg.style.background = "rgba(229,72,77,0.2)";
+          gmMsg.style.color = "#FF8080";
+        }
+      } finally {
+        $("gm-modal-save").disabled = false;
+        $("gm-modal-save").textContent = "Save & Connect";
+      }
+    };
+  }
+
   let rz;
   window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (current) { renderTrain(current.S); renderSleep(current.S); } }, 120); });
 
