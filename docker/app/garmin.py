@@ -164,7 +164,13 @@ def _status_raw(date: str, refresh: bool):
 
 
 def _pick_device(d: dict):
-    return next(iter(d.items()), (None, {})) if isinstance(d, dict) else (None, {})
+    """The entry for the primary training device; with one device (or none flagged) the first entry."""
+    if not isinstance(d, dict) or not d:
+        return None, {}
+    for dev, v in d.items():
+        if isinstance(v, dict) and v.get("primaryTrainingDevice"):
+            return dev, v
+    return next(iter(d.items()))
 
 
 def training_status(date: str, refresh: bool):
@@ -211,22 +217,40 @@ def _vo2_day(date: str):
             "cycling": (item.get("cycling") or {}).get("vo2MaxPreciseValue")}
 
 
-def vo2_trend(start: str, end: str, refresh: bool):
-    """Daily VO2 max, kept in the database so each day is only fetched once (the first call backfills ~8 weeks)."""
+VO2_BUDGET = 8  # uncached days fetched per call; the rest fill in on later calls and the hourly job
+
+
+def vo2_trend(start: str, end: str, refresh: bool, budget: int = VO2_BUDGET):
+    """Daily VO2 max, kept in the database so each day is only fetched once.
+
+    Newest days first, at most `budget` Garmin requests per call, so the first load doesn't fire ~56 requests at once.
+    Days not fetched yet are simply missing from the trend until a later call fills them in.
+    """
     days = list(_days(start, end))
     per_day, oldest = {}, None
-    for day in days:
-        hit = store.cache_get(f"garmin:vo2:{day}", TODAY_TTL if day >= _today() else None)  # past days never expire
+    today = _today()
+    for day in reversed(days):
+        hit = store.cache_get(f"garmin:vo2:{day}", TODAY_TTL if day >= today else None)
+        if hit and day < today:
+            # A past day is final only if it was fetched after that day ended; otherwise fetch it once more.
+            day_end = dt.datetime.combine(dt.date.fromisoformat(day) + dt.timedelta(days=1), dt.time(), TZ).timestamp()
+            if hit[1] < day_end:
+                hit = None
         if hit and not (refresh and day == end):
             v, stored = hit
-        else:
+        elif budget > 0 or day == end:
+            budget -= 1
             v = _vo2_day(day)
             stored = store.cache_put(f"garmin:vo2:{day}", v)
+        else:
+            continue  # not fetched yet
         per_day[day] = v
         oldest = stored if oldest is None else min(oldest, stored)
     sport = "cycling" if any(v.get("cycling") for v in per_day.values()) else "generic"
     trend, last = [], None
     for day in days:
+        if day not in per_day:
+            continue
         v = per_day[day].get(sport)
         if v is not None:
             last = v
@@ -288,6 +312,17 @@ def raw(name: str, date: str | None):
     if name not in RAW:
         raise ToolError("bad_request", f"Unknown raw view {name}")
     return _g(RAW[name], date or _today())
+
+
+def warm_vo2() -> None:
+    """Background job: keep filling the 8-week VO2 max history a few days at a time."""
+    if not configured():
+        return
+    today = dt.datetime.now(TZ).date()
+    try:
+        vo2_trend((today - dt.timedelta(days=55)).isoformat(), today.isoformat(), False)
+    except ToolError as e:
+        log.warning("VO2 max warm-up: %s", e.message)
 
 
 # ---------- the morning snapshot the page shows on any device ----------

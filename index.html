@@ -62,14 +62,8 @@ button { font: inherit; color: inherit; }
 .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .14em; color: var(--accent); }
 
 /* ---------- Hero ---------- */
-.hero { position: relative; overflow: hidden; }
-.hero-art { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
-.hero .wrap { position: relative; z-index: 1; padding-block: 48px 20px; display: flex; flex-direction: column; gap: 16px; }
-.hero h1 { font-size: clamp(40px, 9vw, 64px); line-height: .95; color: #fff; }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; }
 .legend-item { display: flex; align-items: center; gap: 6px; }
 .swatch { width: 11px; height: 11px; border-radius: 2px; flex: none; }
-.swatch--outline { border: 1px solid #fff; }
 
 .dots { display: flex; gap: 3px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--dot); }
@@ -233,7 +227,6 @@ button:disabled { cursor: default; }
 .day.is-done .tip { background: #DDEFE4; }
 
 /* ---------- Footer floor ---------- */
-.floor { display: block; width: 100%; height: auto; max-height: 160px; }
 [hidden]{display:none!important}
 
 /* ---------- Collapsed done days ---------- */
@@ -429,7 +422,6 @@ button:disabled { cursor: default; }
 /* ---------- Weather ---------- */
 .wx-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--panel-line); border-radius: 10px; background: var(--panel); }
 .wx-bar .status { flex: 1; min-width: 0; }
-.wx-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .wx-chip { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; margin-top: 4px; padding: 3px 9px 3px 7px; border-radius: 99px; background: rgba(255, 255, 255, .18); color: #fff; font-size: 12px; font-weight: 700; }
 .wx-chip .icon { width: 15px; height: 15px; }
 .wx-chip.is-rain, .wx-chip.is-wind, .wx-chip.is-both { background: #fff; color: var(--ink); }
@@ -453,10 +445,7 @@ body {
 .gym-bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 .weekbar, main, .foot { position: relative; z-index: 1; }
 .weekbar { position: sticky; z-index: 5; }
-.phases .phase--peak { color: #1A1C1F; }
 .foot { display: flex; justify-content: center; padding-block: 8px 40px; }
-.wordmark { font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: .14em; color: var(--soft); }
-.wordmark span { margin-left: .35em; color: var(--accent); }
 
 /* ---------- Carbon fibre + F1 livery ---------- */
 :root {
@@ -494,8 +483,6 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
   line-height: .95; letter-spacing: .02em; text-transform: uppercase; color: #fff; transform: skewX(-10deg); white-space: nowrap;
 }
 .brand-name span { display: inline-block; margin-left: .18em; padding: 0 .22em; background: var(--papaya); color: #141414; }
-.brand-tag { margin-top: 6px; font-family: "Titillium Web", var(--font-body); font-weight: 600; font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--soft); }
-.brand-tag b { color: var(--papaya); font-weight: 700; padding: 0 .3em; }
 .telemetry { margin: 0; display: grid; grid-template-columns: repeat(3, auto); gap: 0; border: 1px solid #3A3E44; border-radius: 6px; background: rgba(10, 11, 12, .55); }
 .telemetry > div { padding: 6px 14px; border-left: 1px solid #3A3E44; }
 .telemetry > div:first-child { border-left: 0; }
@@ -508,7 +495,6 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
   .telemetry { width: 100%; grid-template-columns: repeat(3, 1fr); }
   .telemetry > div { padding: 5px 10px; }
   .telemetry dd { font-size: 18px; }
-  .brand-tag { font-size: 10.5px; letter-spacing: .12em; }
   .brand-mark i { width: 7px; height: 32px; }
   .brand-mark i:nth-child(2) { height: 25px; margin-top: 7px; }
   .brand-mark i:nth-child(3) { height: 18px; margin-top: 14px; }
@@ -586,10 +572,30 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 .st-tile-value small { margin-left: 3px; font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--soft); }
 .gm-spark { display: block; margin-top: 2px; }
 .gm-score { font: 700 11px var(--font-body); fill: var(--legend); font-variant-numeric: tabular-nums; }
+
+/* ---------- Tabs + views ---------- */
+.tabs { position: relative; z-index: 2; background: #0E0F11; border-bottom: 1px solid #2B2F34; }
+.tabs .wrap { display: flex; gap: 4px; }
+.tabs a {
+  min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center;
+  font-family: "Titillium Web", var(--font-body); font-weight: 700; font-size: 13px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--soft); text-decoration: none; border-bottom: 3px solid transparent;
+}
+.tabs a:hover { color: #fff; }
+.tabs a[aria-current="page"] { color: #fff; border-bottom-color: var(--papaya); }
+.view { position: relative; z-index: 1; }
+.stats .wrap { padding-block: 20px 24px; display: flex; flex-direction: column; gap: 28px; }
+.stats .strava { margin-top: 0; }
+
+.ex-retest { margin: 0 -14px; padding: 8px 14px; background: #FFF3E6; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-2); }
 </style>
 </head>
 <body>
 <canvas class="gym-bg" id="gym-bg" aria-hidden="true"></canvas>
+<nav class="tabs" aria-label="Sections"><div class="wrap">
+<a href="#training" id="tab-training" aria-current="page">Training</a>
+<a href="#stats" id="tab-stats">Stats</a>
+</div></nav>
 <header class="brand">
 <div class="brand-sheen" aria-hidden="true"></div>
 <div class="wrap brand-row">
@@ -607,14 +613,20 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 </div>
 <div class="brand-stripe" aria-hidden="true"></div>
 </header>
+<div class="view" id="view-training">
 <nav class="weekbar" aria-label="Week"><div class="wrap" id="weekbar"></div></nav>
 <main>
 <div class="wrap">
 <div class="phases" id="phases" aria-label="Training phases"></div>
 <div class="weeks" id="weeks" role="group" aria-label="Choose a week"></div>
 <div class="statusline"><div class="status" id="status" role="status"></div><label class="startline" for="plan-start">Plan start <input type="date" id="plan-start"></label></div>
-<div class="wx-bar"><span class="status" id="wx-status" role="status"></span><span class="wx-actions"><button type="button" class="st-btn st-btn--primary" id="wx-allow" hidden>Show weather</button><button type="button" class="st-btn" id="wx-manage" hidden>Open permissions</button></span></div>
+<div class="wx-bar"><span class="status" id="wx-status" role="status"></span></div>
 <ol class="days" id="days"></ol>
+</div>
+</main>
+</div>
+<div class="view stats" id="view-stats" hidden>
+<div class="wrap">
 <section class="strava garmin" id="garmin" aria-labelledby="gm-title">
 <div class="st-head">
 <div>
@@ -709,7 +721,7 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 </div>
 </section>
 </div>
-</main>
+</div>
 <footer class="foot" aria-hidden="true"></footer>
 <script>
 (function () {
@@ -782,6 +794,7 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 
   let last = 0, raf = 0;
   function frame(t) {
+    if (last && t - last < 40) { raf = requestAnimationFrame(frame); return; } // ~25 fps is plenty for a slow drift
     const dt = last ? Math.min(0.05, (t - last) / 1000) : 0;
     last = t;
     draw(dt);
@@ -1190,7 +1203,7 @@ window.FIGURES = (function () {
 
   // ---------- state ----------
   const DEFAULT_START = "2026-11-09"; // Monday the plan began
-  const state = { week: ls.get("tp-week") || null, progress: {}, mode: "connecting", note: "Connecting…", start: DEFAULT_START };
+  const state = { week: ls.get("tp-week") || null, progress: {}, mode: "connecting", note: "Connecting…", start: DEFAULT_START, classes: null };
   const validDate = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
   function dayDate(w, i) {
     const [y, m, d] = state.start.split("-").map(Number);
@@ -1198,6 +1211,7 @@ window.FIGURES = (function () {
   }
   function todayMidnight() { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
   // A day is missed once its date has passed without being marked done.
+  const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const isMissed = (w, i) => !weekData(w).days[DAY_KEYS[i]] && dayDate(w, i) < todayMidnight();
   const missedCount = (w) => DAY_KEYS.filter((_, i) => isMissed(w, i)).length;
   const blankWeek = () => ({ days: {}, a: SESSIONS.a.exercises.map(() => false), b: SESSIONS.b.exercises.map(() => false) });
@@ -1268,6 +1282,13 @@ window.FIGURES = (function () {
     paint();
     let first = true;
     const timer = setTimeout(() => { state.note = "Can't reach saved progress yet. Changes will sync when it connects."; paint(); }, 10000);
+    db.doc("classes/lesmills").onSnapshot(
+      (snap) => {
+        const v = snap.exists ? snap.data() : null;
+        if (v && v.days) { state.classes = v; paint(); }
+      },
+      () => {}
+    );
     db.doc("settings/plan").onSnapshot(
       (snap) => {
         const v = snap.exists ? snap.data().start : null;
@@ -1383,16 +1404,18 @@ window.FIGURES = (function () {
     doneBtn.onclick = () => toggleDay(d.key);
 
     const body = h("div", { class: "day-body" }, h("div", { class: "day-detail" }, d.detail));
+    // Class details: filled in paint() from the saved timetable for that date, else the typical class in d.cls.
+    let cls = null;
     if (d.cls) {
-      const c = d.cls;
+      cls = { time: h("strong"), mins: h("span"), name: h("div", { class: "cls-name" }), place: h("div", { class: "cls-meta" }),
+        who: h("strong"), alt: h("div", { class: "cls-alt" }), src: h("span") };
       body.append(h("div", { class: "cls" },
-        h("div", { class: "cls-time" }, h("strong", null, c.time), h("span", null, `${c.mins} min`)),
+        h("div", { class: "cls-time" }, cls.time, cls.mins),
         h("div", { class: "cls-main" },
-          h("div", { class: "cls-name" }, c.name),
-          h("div", { class: "cls-meta" }, `${c.studio} · Les Mills Auckland City`),
-          h("div", { class: "cls-meta" }, "Instructor: ", h("strong", null, c.instructor)),
-          h("div", { class: "cls-alt" }, `Earlier option: ${c.alt}`),
-          h("div", { class: "cls-src" }, "From the Les Mills timetable on 9 Nov 2026. Instructors can change, so ",
+          cls.name, cls.place,
+          h("div", { class: "cls-meta" }, "Instructor: ", cls.who),
+          cls.alt,
+          h("div", { class: "cls-src" }, cls.src,
             h("a", { href: "https://www.lesmills.co.nz/timetable?club=01", target: "_blank", rel: "noopener" }, "check the live timetable"), "."))));
     }
     const noteEls = [];
@@ -1458,7 +1481,9 @@ window.FIGURES = (function () {
       const list = body.querySelector(".ex-list");
       const finale = h("div", { class: "ex-finale", role: "status" });
       list.after(finale);
-      ex = { s, count, col, bar, rows, list, finale };
+      const retest = h("div", { class: "ex-retest" }, "Retest week: the plan doesn't set strength work for week 12. These are the wk 5–11 sets, shown as a guide.");
+      list.before(retest);
+      ex = { s, count, col, bar, rows, list, finale, retest };
     }
 
     body.id = `${d.key}-details`;
@@ -1469,16 +1494,17 @@ window.FIGURES = (function () {
       paint();
     };
 
+    const titleEl = h("h2", { class: "display day-title" }, d.title);
     const card = h("li", { class: "day", id: d.key, style: { "--c": color } },
       h("div", { class: "day-head" },
         h("div", { class: "day-id" },
           h("span", { class: "day-name" }, d.name.toUpperCase()),
-          h("h2", { class: "display day-title" }, d.title),
+          titleEl,
           dots(EFFORT[d.effort], "#fff", `Effort: ${d.effort}`)),
         moreBtn,
         doneBtn),
       body);
-    return { d, card, body, moreBtn, doneBtn, doneLabel, noteEls, ex };
+    return { d, card, body, moreBtn, doneBtn, doneLabel, noteEls, ex, cls, titleEl };
   });
   document.getElementById("days").append(...cards.map((c) => c.card));
 
@@ -1526,6 +1552,22 @@ window.FIGURES = (function () {
       c.doneBtn.setAttribute("aria-pressed", String(on));
       c.doneBtn.disabled = !writable;
       c.doneLabel.textContent = on ? "Done" : "Mark done";
+      if (c.cls) {
+        const saved = state.classes && state.classes.days && state.classes.days[isoDate(dayDate(w, DAY_KEYS.indexOf(c.d.key)))];
+        const k = saved || c.d.cls;
+        c.titleEl.textContent = saved ? k.name : c.d.title;
+        c.cls.time.textContent = k.time;
+        c.cls.mins.textContent = `${k.mins} min`;
+        c.cls.name.textContent = k.name;
+        c.cls.place.textContent = `${k.studio} · Les Mills ${(saved && state.classes.club) || "Auckland City"}`;
+        c.cls.who.textContent = k.instructor || "to be confirmed";
+        c.cls.alt.hidden = !k.alt;
+        c.cls.alt.textContent = k.alt ? `Earlier option: ${k.alt}` : "";
+        const checked = saved && new Date(state.classes.fetchedAt);
+        c.cls.src.textContent = saved
+          ? `From the Les Mills timetable${checked && !isNaN(checked) ? `, checked ${checked.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}` : ""}. Instructors can change, so `
+          : "The usual class, from the timetable on 9 Nov 2026. This date isn't in the saved timetable, so ";
+      }
       // Done days collapse to their header; the chevron opens them again.
       const open = !on || expanded.has(c.d.key);
       c.body.hidden = !open;
@@ -1561,7 +1603,6 @@ window.FIGURES = (function () {
           const r = c.ex.rows[i];
           const revealed = ticks[i] || i === firstOpen;
           if (revealed) now.add(i); else hidden++;
-          c.ex.list.append(r.li);
           r.num.textContent = String(pos + 1);
           r.li.classList.toggle("is-locked", !revealed);
           r.li.classList.toggle("is-current", i === firstOpen);
@@ -1572,10 +1613,13 @@ window.FIGURES = (function () {
           if (!revealed) { r.li.querySelector(".ex-demo")?.setAttribute("hidden", ""); r.li.querySelector(".ex-thumb")?.setAttribute("aria-expanded", "false"); }
         });
         lastRevealed[key] = now;
+        const want = order.map((i) => c.ex.rows[i].li);
+        if (want.some((li, k) => c.ex.list.children[k] !== li)) c.ex.list.append(...want);
         c.ex.col.textContent = hidden ? `${hidden} still hidden` : (isLate(w) ? "Sets for wk 5–11" : "Sets for wk 1–4");
         const allDone = ticks.every(Boolean);
         c.ex.finale.hidden = !allDone;
         c.ex.finale.textContent = allDone ? `All ${ticks.length} cleared. ${c.d.title} done for week ${w}.` : "";
+        c.ex.retest.hidden = w !== WEEKS;
       }
     }
   }
@@ -1660,7 +1704,7 @@ window.FIGURES = (function () {
       default: return "Couldn't load this from Strava. Try Refresh.";
     }
   }
-  const needsAllow = (e) => ["not_in_manifest", "approval_required", "consent_required"].includes(e && e.code);
+  const needsAllow = (e) => ["not_in_manifest", "approval_required", "consent_required", "upstream_error"].includes(e && e.code);
 
   // ---------- calls ----------
   let mcp = null, perms = null;
@@ -1797,10 +1841,11 @@ window.FIGURES = (function () {
     box.prepend(svg);
     $("st-legend").hidden = !isTime;
     $("st-chart-note").textContent = isTime
-      ? `Moving time per week (Mon–Sun), from your Strava activities. 4-week average: ${fmtDuration(avgLast(totals, 4) * 3600)}.`
-      : `Sum of Strava's relative effort per week. Activities without heart rate have none, so some weeks may read low. 4-week average: ${Math.round(avgLast(totals, 4))}.`;
+      ? `Moving time per week (Mon–Sun), from your Strava activities. Average of the last 4 full weeks: ${fmtDuration(avgLast(totals, 4) * 3600)}.`
+      : `Sum of Strava's relative effort per week. Activities without heart rate have none, so some weeks may read low. Average of the last 4 full weeks: ${Math.round(avgLast(totals, 4))}.`;
   }
-  const avgLast = (arr, n) => arr.slice(-n).reduce((a, b) => a + b, 0) / Math.min(n, arr.length);
+  // The last entry is the current, unfinished week: leave it out of the average.
+  const avgLast = (arr, n) => { const full = arr.slice(0, -1).slice(-n); return full.length ? full.reduce((a, b) => a + b, 0) / full.length : 0; };
 
   function renderTable(weeks) {
     const tb = $("st-table").querySelector("tbody");
@@ -1875,11 +1920,13 @@ window.FIGURES = (function () {
     } else tiles.push(tileError("PRs, last 4 weeks", actsR.reason));
     if (bestR.status === "fulfilled") {
       const efforts = (bestR.value.payload && bestR.value.payload.efforts) || [];
+      // Strava's connector reports all-time bests; the self-hosted server reports the last 12 months and says so.
+      const span = bestR.value.payload && bestR.value.payload.all_time === false ? `, ${bestR.value.payload.window_months || 12} mo` : "";
       const pw = efforts.find((e) => e.best_effort_type === "GreatestPower20min");
       const k5 = efforts.find((e) => e.best_effort_type === "Fastest5k");
       const when = (e) => e.date ? new Date(e.date + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "numeric" }) : "";
-      tiles.push(pw ? tile("Best 20-min power", `${pw.value} W`, when(pw)) : tile("Best 20-min power", "–", "No power data yet"));
-      tiles.push(k5 ? tile("Fastest 5K", fmtClock(k5.value), when(k5)) : tile("Fastest 5K", "–", "No 5K yet"));
+      tiles.push(pw ? tile(`Best 20-min power${span}`, `${pw.value} W`, when(pw)) : tile(`Best 20-min power${span}`, "–", "No power data yet"));
+      tiles.push(k5 ? tile(`Fastest 5K${span}`, fmtClock(k5.value), when(k5)) : tile(`Fastest 5K${span}`, "–", "No 5K yet"));
     } else { tiles.push(tileError("Best 20-min power", bestR.reason)); tiles.push(tileError("Fastest 5K", bestR.reason)); }
     $("st-tiles").replaceChildren(...tiles);
 
@@ -1926,7 +1973,7 @@ window.FIGURES = (function () {
   let rz;
   window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(drawChart, 120); });
 
-  (async function start() {
+  async function start() {
     try { [mcp, perms] = await Promise.all([window.claude?.use?.("mcp") ?? null, window.claude?.use?.("permissions") ?? null]); } catch (e) { mcp = null; }
     if (!mcp) {
       showGate("Strava data appears when this page is open on claude.ai with the Strava connector added.", false);
@@ -1938,13 +1985,15 @@ window.FIGURES = (function () {
     else if (st === "denied") showGate("Strava access was declined for this page. Allow it from the page's Permissions menu, then try again.", true);
     else if (st === "unavailable") { showGate("Strava isn't available in this view.", false); refreshBtn.hidden = true; }
     else showGate("Show your recent Strava activities, achievements and weekly training load here. Claude will ask you to allow this page to read Strava.", true);
-  })();
+  }
+  // Nothing is fetched until the Stats tab is first opened; later visits just redraw the chart at the right width.
+  let started = false;
+  (window.__statsHooks = window.__statsHooks || []).push(() => { if (!started) { started = true; start(); } else drawChart(); });
 })();
 </script>
 <script>
 (function () {
-  const SERVER = "AccuWeather", TOOL = "widgets-daily-claude";
-  const INPUT = { queryParams: { locationKey: "3590462", unit: "metric", lang: "en" } }; // Auckland Central
+  // Weather: reads the forecast saved with the page (weather/auckland), refreshed daily from AccuWeather by a scheduled Claude task.
   const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
   const OUTDOOR = { mon: "run", fri: "run", sun: "ride" }; // other days are indoor sessions
   const ICON = {
@@ -1953,22 +2002,11 @@ window.FIGURES = (function () {
     calm: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>',
   };
 
-  let forecast = null; // "YYYY-MM-DD" -> summary (live)
-  let saved = null; // { forecast, alerts, fetchedAt } kept with the page as a fallback
-  let live = false;
-  let alertsById = {};
-  let problem = null; // copy shown when the forecast can't load
+  let saved = null; // { forecast, alerts, fetchedAt }
   let last = (window.__tpState && window.__tpState()) || { w: 1, start: null };
+  let painted = ""; // skip repaints when nothing the weather depends on has changed
+  const statusEl = document.getElementById("wx-status");
 
-  const num = (s) => { const m = String(s || "").match(/[\d.]+/); return m ? Number(m[0]) : 0; };
-  function summarise(d) {
-    const day = d.day || {}, x = day.extended || {};
-    const prob = day.rainProbabilityValue ?? 0, mm = x.rainValue ?? 0, hrs = day.hoursOfRain ?? 0;
-    const wind = num(x.wind), gust = num(x.gusts), windDir = String(x.wind || "").split(" ")[0];
-    const rain = prob >= 50 && (mm >= 1 || hrs >= 1) ? (mm >= 10 ? "heavy" : "rain") : prob >= 30 ? "maybe" : "dry";
-    const windy = wind >= 30 || gust >= 50 ? "windy" : wind >= 20 || gust >= 40 ? "breezy" : "calm";
-    return { prob, mm, hrs, wind, gust, windDir, rain, windy, phrase: day.longPhrase || day.phrase || "", alerts: d.alerts || [] };
-  }
   function verdict(s) {
     const wet = s.rain === "rain" || s.rain === "heavy", blowy = s.windy === "windy";
     if (wet && blowy) return { text: s.rain === "heavy" ? "Heavy rain + wind" : "Rain + wind", cls: "is-both", icons: ["rain", "wind"] };
@@ -2004,16 +2042,22 @@ window.FIGURES = (function () {
     return (card.__wx = { chip, panel });
   }
 
+  const row = (icon, text) => { const el = document.createElement("div"); el.className = "wx-row"; el.innerHTML = ICON[icon]; el.append(document.createTextNode(text)); return el; };
+
   function paint(w, start) {
     last = { w, start };
-    if (!start) return;
+    if (!start || !saved) return;
+    const stamp = `${w}|${start}|${saved.fetchedAt}`;
+    if (stamp === painted) return;
+    painted = stamp;
+    let covered = 0;
     DAY_KEYS.forEach((key, i) => {
       const card = document.getElementById(key);
       if (!card) return;
       const { chip, panel } = ensureSlots(card);
-      const src = forecast || (saved && saved.forecast);
-      const s = src && src[iso(dateFor(start, w, i))];
+      const s = saved.forecast[iso(dateFor(start, w, i))];
       if (!s) { chip.hidden = true; panel.hidden = true; return; }
+      covered++;
       const v = verdict(s);
       chip.hidden = false;
       chip.className = `wx-chip ${v.cls}`;
@@ -2021,18 +2065,15 @@ window.FIGURES = (function () {
       chip.append(document.createTextNode(v.text));
       panel.hidden = false;
       panel.className = `wx ${v.cls}`;
-      panel.replaceChildren();
-      const row = (icon, text) => { const el = document.createElement("div"); el.className = "wx-row"; el.innerHTML = ICON[icon]; el.append(document.createTextNode(text)); return el; };
-      panel.append(
-        row("rain", s.prob ? `Rain ${s.prob}% chance${s.mm ? ` · ${s.mm} mm over ${s.hrs} h` : ""}` : "No rain expected"),
-        row("wind", `Wind ${s.windDir} ${s.wind} km/h · gusts ${s.gust} km/h`));
       const note = document.createElement("div");
       note.className = "wx-note";
       note.textContent = `${s.phrase ? s.phrase + ". " : ""}${advice(key, s)}`;
-      panel.append(note);
-      const alerts = forecast ? alertsById : (saved && saved.alerts) || {};
-      for (const id of s.alerts) {
-        const a = alerts[id];
+      panel.replaceChildren(
+        row("rain", s.prob ? `Rain ${s.prob}% chance${s.mm ? ` · ${s.mm} mm over ${s.hrs} h` : ""}` : "No rain expected"),
+        row("wind", `Wind ${s.windDir} ${s.wind} km/h · gusts ${s.gust} km/h`),
+        note);
+      for (const id of s.alerts || []) {
+        const a = saved.alerts[id];
         if (!a) continue;
         const al = document.createElement("div");
         al.className = "wx-alert";
@@ -2040,162 +2081,23 @@ window.FIGURES = (function () {
         panel.append(al);
       }
     });
-    const status = document.getElementById("wx-status");
-    const src = forecast || (saved && saved.forecast);
-    if (status && src) {
-      const dates = DAY_KEYS.map((_, i) => iso(dateFor(start, w, i)));
-      const covered = dates.filter((d) => src[d]).length;
-      if (forecast && !problem) status.textContent = covered ? "Live daytime forecast for Auckland Central from AccuWeather." : "No forecast for this week yet: it covers the next 10 days.";
-      else if (!forecast) {
-        const when = new Date(saved.fetchedAt);
-        const stamp = isNaN(when) ? "" : ` fetched ${when.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} ${when.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
-        status.textContent = (covered ? `AccuWeather forecast for Auckland Central,${stamp}.` : `No saved forecast for this week (saved forecast${stamp}).`) + (problem ? "" : "");
-      }
-    }
+    const when = new Date(saved.fetchedAt);
+    const fetched = isNaN(when) ? "" : ` fetched ${when.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} ${when.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+    statusEl.textContent = covered ? `AccuWeather forecast for Auckland Central,${fetched}.` : `No forecast for this week: it covers about 10 days ahead (last${fetched || " fetch unknown"}).`;
   }
   window.__weatherPaint = paint;
 
-  function setStatus(text, button) {
-    const status = document.getElementById("wx-status"), btn = document.getElementById("wx-allow");
-    if (status) status.textContent = text;
-    if (btn) btn.hidden = !button;
-    const mg = document.getElementById("wx-manage");
-    if (mg) mg.hidden = !button || !(permsRef && permsRef.manage);
-    if (saved && !forecast) paint(last.w, last.start);
-  }
-
-  function errorCopy(e) {
-    const base = errorText(e);
-    return e && e.code && !/\(/.test(base) ? `${base} (${e.code})` : base;
-  }
-  function errorText(e) {
-    if (e && e.code === "upstream_error" && /confirm|consent|approv/i.test(e.message || "")) return "claude.ai hasn't confirmed this page can read AccuWeather yet. Click Show weather and allow it when asked.";
-    switch (e && e.code) {
-      case "needs_reauth": return "Your AccuWeather connection has expired. Reconnect it in claude.ai Settings → Connectors.";
-      case "server_not_connected": return "Weather needs the AccuWeather connector. Add it in claude.ai Settings → Connectors.";
-      case "selection_required": return "Choose which AccuWeather connection to use when claude.ai asks.";
-      case "not_in_manifest": case "approval_required": case "consent_required": return "This page needs your OK to read AccuWeather. Click Show weather to allow it.";
-      case "blocked_by_policy": return "Your organization doesn't allow this page to use AccuWeather.";
-      case "server_unavailable": case "rate_limited": return "AccuWeather isn't responding right now. The forecast will retry shortly.";
-      case "tool_error": return `AccuWeather reported an error: ${e.message || "no details"}.`;
-      default: return `Couldn't load the weather forecast (${(e && e.code) || "unknown error"}${e && e.message ? `: ${e.message}` : ""}).`;
-    }
-  }
-  const needsAllow = (e) => ["not_in_manifest", "approval_required", "consent_required"].includes(e && e.code)
-    || (e && e.code === "upstream_error" && (e.retryable || /confirm|consent|approv/i.test(e.message || "")));
-
-  // Find the forecast wherever it sits in the tool result (payload, structured content or text blocks).
-  function findForecast(result) {
-    const seen = new Set();
-    const search = (o, depth) => {
-      if (!o || typeof o !== "object" || depth > 6 || seen.has(o)) return null;
-      seen.add(o);
-      if (Array.isArray(o.dailyForecast)) return o;
-      if (Array.isArray(o.DailyForecasts)) return { dailyForecast: o.DailyForecasts.map((d) => ({ date: d.Date, day: { rainProbabilityValue: d.Day?.RainProbability, hoursOfRain: d.Day?.HoursOfRain, longPhrase: d.Day?.LongPhrase, extended: { rainValue: d.Day?.Rain?.Value, wind: `${d.Day?.Wind?.Direction?.English || ""} ${d.Day?.Wind?.Speed?.Value ?? 0} km/h`, gusts: `${d.Day?.WindGust?.Speed?.Value ?? 0} km/h` } } })) };
-      for (const v of Array.isArray(o) ? o : Object.values(o)) { const r = search(v, depth + 1); if (r) return r; }
-      return null;
-    };
-    const candidates = [result && result.payload, result && result.structuredContent];
-    for (const b of (result && result.content) || []) {
-      if (b && b.type === "text") { try { candidates.push(JSON.parse(b.text)); } catch (e) {} }
-      else candidates.push(b);
-    }
-    if (typeof (result && result.payload) === "string") { try { candidates.push(JSON.parse(result.payload)); } catch (e) {} }
-    for (const c of candidates) { const r = search(c, 0); if (r) return r; }
-    return null;
-  }
-
-  function accept(result) {
-    const payload = findForecast(result);
-    if (!payload) {
-      const shape = result && result.payload && typeof result.payload === "object" ? Object.keys(result.payload).slice(0, 6).join(", ") : typeof (result && result.payload);
-      problem = `AccuWeather answered, but the page couldn't find the daily forecast in it (got: ${shape || "nothing"}).`;
-      setStatus(problem, false);
-      return;
-    }
-    const out = {};
-    for (const d of (payload && payload.dailyForecast) || []) {
-      const key = String(d.date || "").slice(0, 10);
-      if (key) out[key] = summarise(d);
-    }
-    alertsById = {};
-    for (const a of (payload && payload.alerts) || []) {
-      const area = (a.affectedAreas || [])[0] || {};
-      alertsById[a.id] = { name: a.name || a.alertName || "weather warning", when: area.startDate && area.endDate ? `${area.startDate} ${area.startTime} to ${area.endDate} ${area.endTime}` : "" };
-    }
-    forecast = out;
-    problem = null;
-    setStatus("Daytime forecast for Auckland Central from AccuWeather.", false);
-    paint(last.w, last.start);
-  }
-
-  let mcp = null, unwatch = null, permsRef = null;
-  function startWatch() {
-    if (unwatch) return;
-    if (!forecast) setStatus("Loading the forecast…", false);
-    unwatch = mcp.watchTool(SERVER, TOOL, INPUT, (ev) => {
-      if (ev.type === "data") { accept(ev.result); return; }
-      const e = ev.error;
-      if (["needs_reauth", "server_not_connected", "blocked_by_policy", "approval_required", "not_in_manifest", "selection_required"].includes(e && e.code)) {
-        forecast = null; paint(last.w, last.start);
-      }
-      problem = errorCopy(e);
-      setStatus(forecast ? `${problem} Showing the last forecast.` : problem, needsAllow(e));
-      if (needsAllow(e)) { unwatch && unwatch(); unwatch = null; }
-    }, { cache: { staleTime: 30 * 60 * 1000, gcTime: 24 * 60 * 60 * 1000 }, refetchInterval: 60 * 60 * 1000 });
-  }
-  async function allowAndLoad() {
-    setStatus("Asking for permission to read AccuWeather…", false);
-    if (permsRef) { try { await permsRef.request([`mcp:${SERVER}`]); } catch (e) {} }
-    setStatus("Loading the forecast…", false);
-    const call = () => mcp.callTool(SERVER, TOOL, INPUT, { cache: { staleTime: 30 * 60 * 1000, gcTime: 24 * 60 * 60 * 1000 } });
-    try {
-      let res;
-      try { res = await call(); }
-      catch (e) {
-        if (!(e && e.retryable)) throw e;
-        await new Promise((r) => setTimeout(r, Math.min(e.retryAfterMs || 2000, 15000)));
-        res = await call();
-      }
-      accept(res);
-      if (!problem) startWatch();
-    } catch (e) {
-      problem = errorCopy(e);
-      setStatus(problem, needsAllow(e));
-    }
-  }
-
-  async function loadSaved() {
-    try {
-      const db = await (window.claude?.use?.("db") ?? null);
-      if (!db) { setStatus("The weather forecast shows when this page is open on claude.ai.", false); return; }
-      db.doc("weather/auckland").onSnapshot((snap) => {
-        const d = snap.exists ? snap.data() : null;
-        if (!d || !d.days) return;
-        saved = { forecast: d.days, alerts: d.alerts || {}, fetchedAt: d.fetchedAt };
-        paint(last.w, last.start);
-      }, () => {});
-    } catch (e) {}
-  }
-
   (async function start() {
-    const btn = document.getElementById("wx-allow");
-    if (btn) btn.onclick = allowAndLoad;
-    const mg = document.getElementById("wx-manage");
-    if (mg) mg.onclick = async () => { try { await permsRef.manage(); allowAndLoad(); } catch (e) { setStatus("Open the page's Permissions menu in claude.ai and allow AccuWeather.", true); } };
-    loadSaved();
-    // The forecast is saved with the page (refreshed from AccuWeather by Claude); the page doesn't call a connector itself.
-    setStatus("Loading the saved forecast…", false);
-    return;
-    let perms = null;
-    try { [mcp, perms] = await Promise.all([window.claude?.use?.("mcp") ?? null, window.claude?.use?.("permissions") ?? null]); } catch (e) { mcp = null; }
-    permsRef = perms;
-    if (!mcp) { setStatus("Weather shows when this page is open on claude.ai with the AccuWeather connector added.", false); return; }
-    const st = perms ? await perms.state(`mcp:${SERVER}`).catch(() => "unavailable") : "prompt";
-    if (st === "granted") allowAndLoad();
-    else if (st === "unavailable") setStatus("Weather isn't available in this view.", false);
-    else if (st === "denied") setStatus("AccuWeather access was declined for this page. Allow it from the page's Permissions menu.", true);
-    else setStatus("See rain and wind for each day from AccuWeather. Claude will ask you to allow this page to read it.", true);
+    statusEl.textContent = "Loading the forecast…";
+    let db = null;
+    try { db = await (window.claude?.use?.("db") ?? null); } catch (e) {}
+    if (!db) { statusEl.textContent = "The weather forecast shows when this page is open on claude.ai."; return; }
+    db.doc("weather/auckland").onSnapshot((snap) => {
+      const d = snap.exists ? snap.data() : null;
+      if (!d || !d.days) { statusEl.textContent = "No forecast has been saved yet."; return; }
+      saved = { forecast: d.days, alerts: d.alerts || {}, fetchedAt: d.fetchedAt };
+      paint(last.w, last.start);
+    }, () => { statusEl.textContent = "The weather forecast is unavailable right now."; });
   })();
 })();
 </script>
@@ -2609,9 +2511,16 @@ window.FIGURES = (function () {
   let rz;
   window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (current) { renderTrain(current.S); renderSleep(current.S); } }, 120); });
 
-  (async function start() {
+  // Garmin is only loaded once the Stats tab is first opened.
+  let started = false;
+  (window.__statsHooks = window.__statsHooks || []).push(() => { if (!started) { started = true; start(); } });
+  async function start() {
     const use = (n) => Promise.resolve(window.claude?.use?.(n) ?? null).catch(() => null);
     [db, user, mcp, perms] = await Promise.all([use("db"), use("user"), use("mcp"), use("permissions")]);
+    // Health data is kept to the plan's owner and editors: the saved snapshot isn't readable by anyone else.
+    let owner = true;
+    try { if (user) owner = (await user.canEdit()) !== false; } catch (e) {}
+    if (!owner) { setStatus("Garmin data is private to the plan's owner.", false); return; }
     if (db) watchSaved();
     setTimeout(() => {
       if (current || busy) return;
@@ -2630,7 +2539,29 @@ window.FIGURES = (function () {
     if (st === "denied") { if (!current) setStatus("Garmin access was declined for this page. Allow it from the page's Permissions menu.", true); return; }
     $("gm-live").hidden = false;
     if (!current) setStatus("Get today's numbers straight from Garmin Connect on this PC. Claude will ask you to allow it first.", false);
-  })();
+  }
+})();
+</script>
+<script>
+(function () {
+  // Tabs: #training (default) and #stats.
+  const views = { training: document.getElementById("view-training"), stats: document.getElementById("view-stats") };
+  const tabs = { training: document.getElementById("tab-training"), stats: document.getElementById("tab-stats") };
+  let shown = null;
+  function route() {
+    const name = location.hash === "#stats" ? "stats" : "training";
+    if (name === shown) return;
+    shown = name;
+    for (const k of Object.keys(views)) {
+      views[k].hidden = k !== name;
+      if (k === name) tabs[k].setAttribute("aria-current", "page"); else tabs[k].removeAttribute("aria-current");
+    }
+    if (name === "stats") (window.__statsHooks || []).forEach((fn) => fn());
+    // Charts measure their container, which has no width while hidden: let them redraw now.
+    if (name === "stats") window.dispatchEvent(new Event("resize"));
+  }
+  window.addEventListener("hashchange", route);
+  route();
 })();
 </script>
 </body>

@@ -1,6 +1,6 @@
 # KerrChow Fit in Docker (Portainer)
 
-This branch (`docker-version`) runs KerrChow Fit on your own Docker host instead of claude.ai. It uses the same
+This runs KerrChow Fit on your own Docker host instead of claude.ai. It uses the same
 `index.html`, with a small server standing in for the claude.ai pieces it relied on.
 
 | On claude.ai | In the container |
@@ -8,9 +8,10 @@ This branch (`docker-version`) runs KerrChow Fit on your own Docker host instead
 | Artifact storage (check-offs, plan start, weather, Garmin snapshot) | SQLite file on the `kerrchowfit-data` volume |
 | Strava connector | Strava's own API, through your own Strava API app (no Strava subscription needed) |
 | Garmin Connect MCP server on your PC | The `garminconnect` library inside the container, signed in with your Garmin account |
-| AccuWeather connector + scheduled Claude task | Open-Meteo forecast (free, no key), refreshed every 3 hours |
+| AccuWeather connector + scheduled Claude task | Open-Meteo daytime forecast (free, no key), refreshed every 3 hours |
+| Les Mills class details from the scheduled Claude task | Daily check of the club timetable at 4:50 am |
 | Scheduled Claude task for Garmin at 5:45 am | Built-in job at `GARMIN_REFRESH_TIME` |
-| claude.ai sign-in | Optional username and password for the whole site |
+| claude.ai sign-in | Username and password for the whole site (required) |
 
 ## How it fits together
 
@@ -20,19 +21,21 @@ browser ──> kerrchowfit container (port 8000, published as HOST_PORT)
               ├─ /api/db/*         page data in /data/kerrchowfit.db
               ├─ /api/mcp/call     Strava + Garmin "connector" calls
               ├─ /strava/connect   one-time Strava sign-in
-              └─ scheduler         Garmin snapshot each morning, weather every 3 h, Strava best efforts hourly
+              └─ scheduler         Garmin snapshot and class timetable each morning, weather every 3 h,
+                                   Strava best efforts and VO2 history hourly, cache clean-up nightly
 volume kerrchowfit-data → /data   database, Strava tokens, Garmin tokens
 ```
 
-Files on this branch:
+Files:
 - `docker-compose.yml`: the stack Portainer deploys.
 - `docker/Dockerfile`: builds the image from this repository.
-- `docker/app/`: the server (FastAPI). `main.py` routes, `store.py` SQLite, `strava.py`, `garmin.py`, `weather.py`, `jobs.py`.
+- `docker/app/`: the server (FastAPI). `main.py` routes, `store.py` SQLite, `strava.py`, `garmin.py`, `weather.py`, `lesmills.py`, `jobs.py`.
 - `docker/web/claude-shim.js`: makes the page's `window.claude.use("db" | "mcp" | "user" | "permissions")` calls go to the server.
 - `.env.example`: every setting, with examples.
 
 `index.html` itself is unchanged. When serving it, the server adds the shim script and swaps a few claude.ai-specific
-messages (for example "Add it in claude.ai Settings" becomes "Connect it at /strava/connect").
+messages (for example "Add it in claude.ai Settings" becomes "Connect it at /strava/connect"). If one of those
+messages is ever reworded in the page, the server logs a warning at start-up and the tests fail.
 
 ---
 
@@ -65,9 +68,9 @@ can't build (it has no source code to build from).
 4. Repository settings:
    - **Authentication:** turn on only if the repo is private. Username `adamkerrnz`, password = the personal access token.
    - **Repository URL:** `https://github.com/adamkerrnz/kerrchowfit`
-   - **Repository reference:** `refs/heads/docker-version`
+   - **Repository reference:** `refs/heads/main` (the `docker-version` branch was merged into `main`; new changes land there)
    - **Compose path:** `docker-compose.yml`
-   - **GitOps updates:** optional. Turn it on with **Polling** (e.g. every `24h`) if you want new commits on the branch to redeploy automatically.
+   - **GitOps updates:** optional. Turn it on with **Polling** (e.g. every `24h`) if you want new commits to redeploy automatically.
 5. **Environment variables:** click **Advanced mode** and paste this, filled in with your values:
 
    ```
@@ -83,19 +86,22 @@ can't build (it has no source code to build from).
    GARMIN_REFRESH_TIME=05:45
    WEATHER_LAT=-36.8485
    WEATHER_LON=174.7633
+   LESMILLS_CLUB=01
    ```
 
    | Variable | What it does |
    |---|---|
    | `HOST_PORT` | Port on the Docker host. Open the app at `http://<host>:<HOST_PORT>`. |
    | `TZ` | Your time zone. Drives "today", the week view and the job times. |
-   | `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` | Browser login for the whole site. Leave both empty only if the host is unreachable from outside your network. |
+   | `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` | Browser login for the whole site. **Required:** with either one empty, the server answers every request with a set-up message and serves nothing. |
+   | `ALLOW_NO_LOGIN` | Set to `true` to run with no login at all. Only for a network nobody else can reach: anyone who can open the address can read your health data and change your check-offs. |
    | `PUBLIC_URL` | The exact address you open the app at. Used for the Strava sign-in redirect. |
    | `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | From your Strava API app. |
    | `STRAVA_REFRESH_TOKEN` | Optional. Only if you'd rather paste a token than use `/strava/connect`. |
    | `GARMIN_EMAIL` / `GARMIN_PASSWORD` | Used once to sign in; the tokens are then saved on the volume. |
    | `GARMIN_REFRESH_TIME` | When the daily Garmin snapshot runs (24-hour `HH:MM`). |
    | `WEATHER_LAT` / `WEATHER_LON` | Forecast location. Default is Auckland Central. |
+   | `LESMILLS_CLUB` / `LESMILLS_TIME` | Club code and class start time for the Tuesday and Thursday class details. Default `01` (Auckland City) at `07:10`. Set `LESMILLS_CLUB=` (empty) to turn the daily timetable check off. |
 
 6. Click **Deploy the stack**. The first build takes a few minutes (it installs Python packages).
 7. Go to **Containers → kerrchowfit**. Status should become **healthy** within a minute. If not, open **Logs**.
@@ -125,16 +131,26 @@ Once tokens are saved you can delete `GARMIN_PASSWORD` from the stack's environm
 
 - `http://<host>:8088/` shows the tracker, weather on each day, the Garmin section and Strava.
 - The Garmin chip reads **Live** when the page fetched it just now, or **Saved** for the morning snapshot.
-- To run a job now: `curl -u adam:password -X POST http://<host>:8088/api/jobs/garmin` (or `/weather`).
+- To run a job now: `curl -u adam:password -X POST http://<host>:8088/api/jobs/garmin` (or `/weather`, `/lesmills`).
 - If a Garmin panel says "No data", compare with the raw response at
   `http://<host>:8088/api/debug/garmin/status` (also `summary`, `readiness`, `hrv`, `sleep`, `maxmetrics`).
   Garmin's field names aren't documented, so `docker/app/garmin.py` may need a tweak.
 
 ---
 
+## Tests
+
+```bash
+pip install -r docker/requirements.txt -r tests/requirements.txt
+python -m pytest tests -q
+node --test tests/page.test.mjs
+```
+
+They also run on GitHub for every pull request.
+
 ## Updating
 
-- **With GitOps polling on:** push to `docker-version` and Portainer redeploys on its next poll.
+- **With GitOps polling on:** Portainer redeploys on its next poll after a change lands on the branch it follows.
 - **By hand:** **Stacks → kerrchowfit → Pull and redeploy**. If Portainer offers **Re-pull image and redeploy**
   or a rebuild option, turn it on so the image is rebuilt from the new code.
 
@@ -163,10 +179,16 @@ docker compose up -d --build
 ## Known differences from the claude.ai version
 
 - **Strava best efforts** cover the last 12 months, worked out from your activities, not Strava's all-time records.
-  The first time, they fill in over a few hours to stay inside Strava's rate limit (100 requests per 15 minutes).
+  The tiles say so ("Fastest 5K, 12 mo"). The first time, they fill in over a few hours to stay inside Strava's
+  rate limit (100 requests per 15 minutes).
 - **Garmin** goes through the unofficial `garminconnect` library. Garmin can change its sign-in or data and break it
   without notice; updating the library (`docker/requirements.txt`) usually fixes it.
-- **VO2 max trend:** the first Garmin run fetches about 8 weeks of daily values (one request per day), so it takes a minute.
-- **Weather** comes from Open-Meteo, not AccuWeather, and has no MetService warnings.
+- **VO2 max trend:** the 8-week history fills in a few days at a time (8 Garmin requests per load, plus an hourly
+  top-up), so the line starts short and is complete within a few hours. With two Garmin devices, the one Garmin
+  marks as your primary training device is used.
+- **Weather** comes from Open-Meteo, not AccuWeather. Each day is summed up over 7 am to 7 pm, like AccuWeather's
+  daytime forecast. Open-Meteo carries no official warnings, so MetService watches and warnings don't show.
+- **Les Mills class details** come from the data feed behind the club's public timetable page, checked once a day.
+  It isn't an official API: if Les Mills changes it, the page falls back to the usual class and says so.
 - **Check-offs** start empty. Progress saved on claude.ai stays there; it isn't copied across.
 - There's one user: whoever has the site login can tick sessions off.
