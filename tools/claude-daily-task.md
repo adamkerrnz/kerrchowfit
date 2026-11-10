@@ -1,12 +1,18 @@
-# The claude.ai daily task
+# The claude.ai daily tasks
 
-On claude.ai, a scheduled Claude task refreshes the weather and the Les Mills class details each morning
-(5:40 am Pacific/Auckland), in a fresh session each run, with the AccuWeather connector. This is the prompt it
-uses. `{{SCRIPT}}` stands for the full text of `tools/daily_refresh.py`, pasted in when the task is created,
-because the session starts without this repository.
+On claude.ai, two scheduled Claude tasks keep the page's saved data fresh each morning (5:40 am Pacific/Auckland):
 
-To change what the task does, edit this file or the script, then ask Claude to update the scheduled task
-"Refresh KerrChow Fit weather and classes" with the new text.
+| Task | Saves | Runs in |
+|---|---|---|
+| **Refresh KerrChow Fit weather** | `weather/auckland`: AccuWeather daytime forecast, keeping the days of the current week that have passed | The Claude Code session that built the page, because it is the one with the AccuWeather connector. Scheduled tasks that start their own session can't be given connectors on this account. |
+| **Refresh KerrChow Fit class details** | `classes/lesmills`: the 7:10 cycle class on Tuesdays and Thursdays | A fresh session each run. It needs no connector, only the Les Mills timetable feed. |
+
+Both use the logic in `tools/daily_refresh.py` (the class task carries its own copy of the class half, because its
+session starts without this repository). The tests check that this logic and the self-hosted server agree.
+
+If AccuWeather becomes available to scheduled tasks, or you create the task from the claude.ai routines page with the
+connector attached, the combined prompt below does both jobs in one fresh session. `{{SCRIPT}}` stands for the full
+text of `tools/daily_refresh.py`.
 
 ```
 Daily refresh for the KerrChow Fit page (artifact https://claude.ai/artifact/DYEHZS3gxQssUfvTXQfN3T).

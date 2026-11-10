@@ -34,7 +34,7 @@ Some features use the Claude artifact runtime (`window.claude`), so they only wo
 | Strava (Stats tab) | Uses the viewer's Strava connector | Shows a note instead |
 | Weather | Reads the forecast saved with the artifact (`weather/auckland`) | Shows a note instead |
 
-On claude.ai a scheduled Claude task runs daily at 5:40 am NZ time, in a fresh session each time. It saves the AccuWeather 10-day daytime forecast to `weather/auckland` (keeping the days of the current week that have already passed) and the Tuesday and Thursday class details to `classes/lesmills`.
+On claude.ai two scheduled Claude tasks run daily at 5:40 am NZ time. One saves the AccuWeather 10-day daytime forecast to `weather/auckland`, keeping the days of the current week that have already passed. The other saves the Tuesday and Thursday class details to `classes/lesmills`. See `tools/claude-daily-task.md`.
 
 The Garmin snapshot (`garmin/latest`) is readable only by the artifact's owner and editors; everything else is readable by anyone the page is shared with.
 
