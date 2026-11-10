@@ -4,6 +4,14 @@ A 12-week bike, run and strength training tracker: one page with a check-off for
 
 The live version runs as a Claude artifact: https://claude.ai/artifact/DYEHZS3gxQssUfvTXQfN3T
 
+## Screenshots
+
+| Training | Strength session | Stats |
+|---|---|---|
+| ![Training tab: phase strip, week picker and day cards](docs/screenshots/training.png) | ![Strength session: current exercise highlighted, the rest hidden](docs/screenshots/workout.png) | ![Stats tab: Strava tiles, weekly training load and latest activities](docs/screenshots/stats.png) |
+
+The Stats screenshot uses sample numbers.
+
 ## What's in it
 
 - **Two tabs:** Training (the week, day cards and weather) and Stats (Strava and Garmin).
