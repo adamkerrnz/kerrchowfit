@@ -306,13 +306,16 @@ def get_athlete_best_efforts(inp: dict, refresh: bool):
     return {"efforts": efforts, "all_time": False, "window_months": 12}, stored
 
 
-def warm_best_efforts() -> None:
+def warm_best_efforts() -> bool | None:
     """Background job: fill the best-effort cache a little at a time within Strava's rate limit."""
-    if configured():
-        try:
-            get_athlete_best_efforts({}, False)
-        except ToolError as e:
-            log.warning("best efforts warm-up: %s", e.message)
+    if not configured():
+        return None
+    try:
+        get_athlete_best_efforts({}, False)
+        return True
+    except ToolError as e:
+        log.warning("best efforts warm-up: %s", e.message)
+        return False
 
 
 def call(tool: str, inp: dict, refresh: bool):

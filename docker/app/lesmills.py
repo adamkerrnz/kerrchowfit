@@ -79,9 +79,10 @@ def pick_classes(cards: list[dict], start: str = START) -> dict:
     return out
 
 
-def refresh() -> None:
+def refresh() -> bool | None:
+    """Fetch and save the class details; None when turned off, False when nothing usable came back."""
     if not enabled():
-        return
+        return None
     try:
         r = httpx.get(URL, params={"searchClubCodes": CLUB, "searchClassCodes": "", "searchTrainerNames": ""},
                       headers={"User-Agent": "KerrChowFit/1.0 (personal training tracker)"}, timeout=30)
@@ -91,13 +92,14 @@ def refresh() -> None:
         club = next((c.get("clubName") for c in data.get("clubs") or [] if c.get("crmClubCode") == CLUB), None)
     except Exception as e:
         log.warning("Les Mills timetable refresh failed: %s", e)
-        return
+        return False
     if not days:
         log.warning("Les Mills timetable had no %s cycle classes on Tuesday or Thursday; keeping what was saved", START)
-        return
+        return False
     today = dt.datetime.now(ZoneInfo(TZ)).date()
     cutoff = (today - dt.timedelta(days=KEEP_PAST_DAYS)).isoformat()
     old = (store.doc_get(DOC) or {}).get("days") or {}
     kept = {d: v for d, v in old.items() if cutoff <= d < today.isoformat() and d not in days}
     store.doc_set(DOC, {"days": {**kept, **days}, "club": club, "fetchedAt": int(time.time() * 1000), "source": "lesmills.co.nz"})
     log.info("Les Mills classes saved for %s", ", ".join(sorted(days)))
+    return True

@@ -232,9 +232,10 @@ def plan(today: dt.date) -> dict:
     }
 
 
-def snapshot() -> None:
+def snapshot() -> bool | None:
+    """Save today's Garmin data to garmin/latest; None when no key is set, False when every call failed."""
     if not configured():
-        return
+        return None
     today = dt.datetime.now(TZ).date()
     raw_out, failed = {}, []
     for key, (tool, inp) in plan(today).items():
@@ -244,6 +245,7 @@ def snapshot() -> None:
             failed.append(f"{tool}: {getattr(e, 'message', e)}")
     if not raw_out:
         log.error("Garmin snapshot failed: %s", "; ".join(failed))
-        return
+        return False
     store.doc_set("garmin/latest", {"v": 2, "date": today.isoformat(), "fetchedAt": int(time.time() * 1000), "source": "scheduled", "raw": raw_out})
     log.info("Garmin snapshot saved for %s%s", today, f" ({len(failed)} failed: {'; '.join(failed)})" if failed else "")
+    return True

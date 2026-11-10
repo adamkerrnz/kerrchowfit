@@ -24,7 +24,8 @@ services:
       STRAVA_CLIENT_SECRET: ${STRAVA_CLIENT_SECRET:-}
       STRAVA_REFRESH_TOKEN: ${STRAVA_REFRESH_TOKEN:-}
       GARMIN_PERSONAL_API_KEY: ${GARMIN_PERSONAL_API_KEY:-}
-      GARMIN_REFRESH_TIME: ${GARMIN_REFRESH_TIME:-05:45}
+      # Daily refresh (weather, classes, Garmin, Strava); empty turns it off, e.g. when host cron runs `python -m app.daily`
+      DAILY_REFRESH_TIME: ${DAILY_REFRESH_TIME-05:40}
       # Forecast location (default: Auckland Central)
       WEATHER_LAT: ${WEATHER_LAT:--36.8485}
       WEATHER_LON: ${WEATHER_LON:-174.7633}

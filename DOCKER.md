@@ -8,9 +8,9 @@ This runs KerrChow Fit on your own Docker host instead of claude.ai. It uses the
 | Artifact storage (check-offs, plan start, weather, Garmin snapshot) | SQLite file on the `kerrchowfit-data` volume |
 | Strava connector | Strava's own API, through your own Strava API app (no Strava subscription needed) |
 | (no Garmin source on claude.ai) | Garmin's official Connect Personal API, with a Personal API key entered on the Stats tab |
-| AccuWeather connector + scheduled Claude task | Open-Meteo daytime forecast (free, no key), refreshed every 3 hours |
-| Les Mills class details from the scheduled Claude task | Daily check of the club timetable at 4:50 am |
-| — | Garmin snapshot job at `GARMIN_REFRESH_TIME` |
+| AccuWeather connector + scheduled Claude task | Open-Meteo daytime forecast (free, no key), in the daily refresh and every 3 hours |
+| Les Mills class details from the scheduled Claude task | Club timetable check in the daily refresh |
+| — | Garmin snapshot in the daily refresh |
 | claude.ai sign-in | Username and password for the whole site (required) |
 
 ## How it fits together
@@ -23,8 +23,8 @@ browser ──> kerrchowfit container (port 8000, published as HOST_PORT)
               ├─ /api/garmin/*     Garmin Personal API data for the Stats tab
               ├─ /api/integrations Strava + Garmin credentials entered on the Stats tab
               ├─ /strava/connect   Strava sign-in (OAuth)
-              └─ scheduler         Garmin snapshot and class timetable each morning, weather every 3 h,
-                                   Strava best efforts hourly, cache clean-up nightly
+              └─ scheduler         daily refresh (app/daily.py) at DAILY_REFRESH_TIME, weather every 3 h,
+                                   Strava best efforts hourly
 volume kerrchowfit-data → /data   database, including the Strava and Garmin credentials
 ```
 
@@ -40,6 +40,20 @@ messages (for example "Add it in claude.ai Settings" becomes "Use Strava API set
 messages is ever reworded in the page, the server logs a warning at start-up and the tests fail.
 
 ---
+
+
+## Daily refresh
+
+`app/daily.py` does the work the scheduled Claude tasks did on claude.ai, with no Claude involved. The server runs
+it every day at `DAILY_REFRESH_TIME`. To run it by hand, or from the host's cron with `DAILY_REFRESH_TIME=` empty:
+
+```
+docker exec kerrchowfit python -m app.daily                  # weather, classes, garmin, strava, prune
+docker exec kerrchowfit python -m app.daily weather classes  # only these
+```
+
+Each task prints `ok`, `skipped` (not set up yet) or `failed`; the exit status is 1 if any failed. Host cron example:
+`40 5 * * * docker exec kerrchowfit python -m app.daily >> /var/log/kerrchowfit-daily.log 2>&1`
 
 ## Before you start
 
@@ -82,7 +96,7 @@ can't build (it has no source code to build from).
    BASIC_AUTH_USER=adam
    BASIC_AUTH_PASSWORD=pick-a-long-password
    PUBLIC_URL=http://192.168.1.50:8088
-   GARMIN_REFRESH_TIME=05:45
+   DAILY_REFRESH_TIME=05:40
    WEATHER_LAT=-36.8485
    WEATHER_LON=174.7633
    LESMILLS_CLUB=01
@@ -98,7 +112,7 @@ can't build (it has no source code to build from).
    | `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | Optional: from your Strava API app. Easier to enter on the Stats tab instead. |
    | `STRAVA_REFRESH_TOKEN` | Optional. Only if you'd rather paste a token than connect from the Stats tab. |
    | `GARMIN_PERSONAL_API_KEY` | Optional: your Garmin Personal API key. Easier to enter on the Stats tab instead. |
-   | `GARMIN_REFRESH_TIME` | When the daily Garmin snapshot runs (24-hour `HH:MM`). |
+   | `DAILY_REFRESH_TIME` | When the daily refresh runs (24-hour `HH:MM`, default `05:40`): weather, class details, Garmin snapshot, Strava best efforts and cache clean-up. Empty turns the built-in run off, for when the host's cron runs it instead (see *Daily refresh*). `GARMIN_REFRESH_TIME` still works as the older name. |
    | `WEATHER_LAT` / `WEATHER_LON` | Forecast location. Default is Auckland Central. |
    | `LESMILLS_CLUB` / `LESMILLS_TIME` | Club code and class start time for the Tuesday and Thursday class details. Default `01` (Auckland City) at `07:10`. Set `LESMILLS_CLUB=` (empty) to turn the daily timetable check off. |
 
