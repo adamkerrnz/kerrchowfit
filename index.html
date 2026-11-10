@@ -547,21 +547,13 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 .gm-chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--gm-dot, #9AA0A8); }
 .gm-chip.is-live { --gm-dot: var(--done); color: #fff; }
 .gm-chip.is-old { --gm-dot: var(--accent); }
-.gm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-@media (max-width: 640px) { .gm-grid { grid-template-columns: minmax(0, 1fr); } }
-.gm-say { margin: 0; font-size: 14px; line-height: 1.45; color: var(--legend); }
-.gm-say strong { color: #fff; }
-.gm-rows { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+@media (max-width: 640px) { .gm-rows { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .gm-row { display: grid; grid-template-columns: minmax(96px, 9.5em) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
 .gm-row-label { color: var(--legend); font-weight: 600; }
 .gm-row-val { color: var(--soft); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
 .gm-track { position: relative; height: 10px; border-radius: 4px; background: #2B2F34; overflow: hidden; }
 .gm-fill { position: absolute; inset: 0 auto 0 0; border-radius: 0 4px 4px 0; background: var(--gm-c, #9AA0A8); }
 .gm-band { position: absolute; top: 0; bottom: 0; background: rgba(255, 255, 255, .13); border-inline: 1px dashed rgba(255, 255, 255, .45); }
-.gm-pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 11px; font-weight: 700; background: #2B2F34; color: var(--soft); }
-.gm-pill.is-good { background: #173D2A; color: #7FE0AE; }
-.gm-pill.is-warn { background: #4A2C0C; color: #FFB46B; }
-.gm-pill.is-bad { background: #4A1A1C; color: #FF9A9D; }
 .gm-kv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .gm-kv > div { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: 8px; background: rgba(255, 255, 255, .04); border: 1px solid #33373D; min-width: 0; }
 .gm-kv span { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); }
@@ -570,8 +562,18 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 .gm-sub { margin: 4px 0 0; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--papaya); }
 .gm-missing { margin: 0; font-size: 13px; color: var(--soft); font-style: italic; }
 .st-tile-value small { margin-left: 3px; font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--soft); }
-.gm-spark { display: block; margin-top: 2px; }
 .gm-score { font: 700 11px var(--font-body); fill: var(--legend); font-variant-numeric: tabular-nums; }
+
+/* ---------- API setup (self-hosted only) ---------- */
+.api-setup { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid var(--panel-line); border-radius: 12px; background: var(--panel-2); }
+.api-setup p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--legend); }
+.api-setup a { color: var(--accent); }
+.api-setup label { margin-top: 4px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); }
+.api-setup input { min-height: 40px; padding: 0 12px; border: 1px solid var(--panel-line); border-radius: 8px; background: #16181B; color: #fff; font: 13px ui-monospace, monospace; }
+.api-msg:empty { display: none; }
+.api-msg.is-bad { color: #FF9A9D; }
+.api-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.api-row a.st-btn { display: inline-flex; align-items: center; text-decoration: none; color: #fff; }
 
 /* ---------- Tabs + views ---------- */
 .tabs { position: relative; z-index: 2; background: #0E0F11; border-bottom: 1px solid #2B2F34; }
@@ -631,41 +633,23 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 <div class="st-head">
 <div>
 <div class="eyebrow">GARMIN</div>
-<h2 class="display st-title" id="gm-title">Body &amp; readiness</h2>
+<h2 class="display st-title" id="gm-title">Body &amp; recovery</h2>
 </div>
 <div class="st-actions">
-<button type="button" class="st-btn" id="gm-config-btn" style="border-color: rgba(255,255,255,0.2);">Garmin API Setup</button>
-<button type="button" class="st-btn st-btn--primary" id="gm-live" hidden>Get live data</button>
+<button type="button" class="st-btn" id="gm-setup-btn" hidden aria-expanded="false" aria-controls="gm-setup">Garmin API setup</button>
 <button type="button" class="st-btn" id="gm-refresh" hidden>Refresh</button>
 </div>
 </div>
-<dialog id="gm-modal" style="background: #212428; color: #EDEFF2; border: 1px solid #41464D; border-radius: 12px; max-width: 480px; width: 90%; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.7);">
-  <form method="dialog" id="gm-form">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-      <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #fff;">Garmin Developer / Personal API</h3>
-      <button type="button" id="gm-modal-close" style="background: none; border: none; color: #9AA0A8; font-size: 22px; cursor: pointer; line-height: 1;">&times;</button>
-    </div>
-    <p style="font-size: 13px; color: #B8BDC4; line-height: 1.5; margin-bottom: 14px;">
-      Connect your Garmin account using Garmin's official <strong>Personal API Key</strong> (from <a href="https://connect.garmin.com" target="_blank" rel="noopener" style="color: #FF8A1F; text-decoration: underline;">Garmin Connect Web</a> &rarr; <em>Profile &amp; Account &rarr; Settings &rarr; Personal API Key</em>).
-    </p>
-    <div style="margin-bottom: 14px;">
-      <label for="gm-key-input" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #9AA0A8; margin-bottom: 6px;">Personal API Key</label>
-      <input type="password" id="gm-key-input" placeholder="Paste your Garmin Personal API Key" style="width: 100%; box-sizing: border-box; background: #16181B; border: 1px solid #41464D; color: #fff; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 13px;">
-    </div>
-    <div id="gm-config-msg" style="font-size: 12px; margin-bottom: 14px; display: none; padding: 8px 10px; border-radius: 6px;"></div>
-    <div style="display: flex; gap: 8px; justify-content: flex-end;">
-      <button type="button" id="gm-modal-cancel" class="st-btn">Cancel</button>
-      <button type="button" id="gm-modal-save" class="st-btn st-btn--primary">Save &amp; Connect</button>
-    </div>
-  </form>
-</dialog>
+<form class="api-setup" id="gm-setup" hidden>
+<p>Create a <strong>Personal API key</strong> on <a href="https://connect.garmin.com" target="_blank" rel="noopener">Garmin Connect Web</a> (Settings → Personal API Key) and paste it here. It is kept on this server and never shown again.</p>
+<label for="gm-key">Personal API key</label>
+<input type="password" id="gm-key" autocomplete="off" spellcheck="false" placeholder="Paste your Garmin Personal API key">
+<p class="api-msg" id="gm-setup-msg" role="status"></p>
+<div class="api-row"><button type="submit" class="st-btn st-btn--primary">Save key</button><button type="button" class="st-btn" id="gm-key-clear" hidden>Remove key</button></div>
+</form>
 <div class="gm-bar"><span class="gm-chip" id="gm-source" hidden></span><span class="status" id="gm-status" role="status">Loading Garmin data…</span></div>
 <div class="st-body" id="gm-body" hidden>
 <div class="st-tiles" id="gm-tiles"></div>
-<div class="gm-grid">
-<div class="st-card" id="gm-ready-card"><div class="st-card-head"><h3>Readiness</h3><span class="gm-pill" id="gm-ready-pill"></span></div><div id="gm-ready"></div></div>
-<div class="st-card" id="gm-status-card"><div class="st-card-head"><h3>Training status</h3><span class="gm-pill" id="gm-status-pill"></span></div><div id="gm-train"></div></div>
-</div>
 <div class="st-card" id="gm-sleep-card">
 <div class="st-card-head"><h3>Sleep · last 7 nights</h3></div>
 <div class="st-legend">
@@ -684,10 +668,7 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 </table></div>
 </details>
 </div>
-<div class="gm-grid">
-<div class="st-card" id="gm-focus-card"><div class="st-card-head"><h3>Load focus · 4 weeks</h3><span class="gm-pill" id="gm-focus-pill"></span></div><div id="gm-focus"></div></div>
 <div class="st-card" id="gm-day-card"><div class="st-card-head"><h3>Today &amp; this week</h3></div><div id="gm-day"></div></div>
-</div>
 </div>
 </section>
 <section class="strava" id="strava" aria-labelledby="st-title">
@@ -698,9 +679,19 @@ body { background: var(--carbon); background-color: #17181B; background-size: 20
 </div>
 <div class="st-actions">
 <span class="status" id="st-updated" role="status"></span>
+<button type="button" class="st-btn" id="st-setup-btn" hidden aria-expanded="false" aria-controls="st-setup">Strava API setup</button>
 <button type="button" class="st-btn" id="st-refresh">Refresh</button>
 </div>
 </div>
+<form class="api-setup" id="st-setup" hidden>
+<p>Create an API application at <a href="https://www.strava.com/settings/api" target="_blank" rel="noopener">strava.com/settings/api</a> with this server's host name as the <em>Authorization Callback Domain</em>, enter its Client ID and Client Secret, then connect Strava to allow reading your activities.</p>
+<label for="st-client-id">Client ID</label>
+<input id="st-client-id" inputmode="numeric" autocomplete="off" spellcheck="false">
+<label for="st-client-secret">Client Secret</label>
+<input type="password" id="st-client-secret" autocomplete="off" spellcheck="false">
+<p class="api-msg" id="st-setup-msg" role="status"></p>
+<div class="api-row"><button type="submit" class="st-btn st-btn--primary">Save</button><a class="st-btn" id="st-oauth" href="/strava/connect" hidden>Connect Strava</a><button type="button" class="st-btn" id="st-app-clear" hidden>Remove</button></div>
+</form>
 <div class="st-gate" id="st-gate" hidden>
 <p id="st-gate-msg"></p>
 <button type="button" class="st-btn st-btn--primary" id="st-connect">Show my Strava activity</button>
@@ -1652,6 +1643,70 @@ window.FIGURES = (function () {
 </script>
 <script>
 (function () {
+  // Strava and Garmin credentials for the self-hosted server. They are entered here, kept on the server and never
+  // sent back to the page. On claude.ai there is no server behind the page, so the setup buttons stay hidden.
+  async function api(method, url, body) {
+    const r = await fetch(url, { method, credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+    if (!(r.headers.get("content-type") || "").includes("json")) throw { code: "unavailable", message: "No KerrChow Fit server here." };
+    const data = await r.json();
+    if (!r.ok || data.error) throw data.error || { code: "unavailable", message: `HTTP ${r.status}` };
+    return data;
+  }
+  const listeners = [];
+  const K = window.kcfIntegrations = {
+    status: api("GET", "/api/integrations").catch(() => null), // null when not self-hosted
+    onChange: (fn) => listeners.push(fn),
+    async save(kind, body) { const s = await api("PUT", `/api/integrations/${kind}`, body); listeners.forEach((fn) => fn(kind, s)); return s; },
+    async clear(kind) { const s = await api("DELETE", `/api/integrations/${kind}`); listeners.forEach((fn) => fn(kind, s)); return s; },
+  };
+  const $ = (id) => document.getElementById(id);
+
+  // One setup form per service: a toggle button, the form, a message line and a remove button.
+  function setupForm(o) {
+    const btn = $(o.btn), form = $(o.form), msg = $(o.msg), clear = $(o.clear);
+    const say = (text, bad) => { msg.textContent = text || ""; msg.classList.toggle("is-bad", !!bad); };
+    const open = (on) => { form.hidden = !on; btn.setAttribute("aria-expanded", String(on)); };
+    const paint = (s) => { const d = o.describe(s); say(d.text); clear.hidden = !d.removable; if (o.paint) o.paint(s); return d; };
+    btn.onclick = () => open(form.hidden);
+    form.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const body = o.collect();
+      if (typeof body === "string") { say(body, true); return; }
+      const submit = form.querySelector('[type="submit"]');
+      submit.disabled = true; say("Saving…");
+      try { const s = await K.save(o.kind, body); form.reset(); if (paint(s).ready) open(false); }
+      catch (e) { say((e && e.message) || "Couldn't save.", true); }
+      finally { submit.disabled = false; }
+    };
+    clear.onclick = async () => { try { paint(await K.clear(o.kind)); } catch (e) { say((e && e.message) || "Couldn't remove.", true); } };
+    K.status.then((s) => { if (!s) return; btn.hidden = false; if (!paint(s).ready) open(true); });
+  }
+
+  setupForm({
+    kind: "garmin", btn: "gm-setup-btn", form: "gm-setup", msg: "gm-setup-msg", clear: "gm-key-clear",
+    collect: () => { const k = $("gm-key").value.trim(); return k ? { api_key: k } : "Paste your Garmin Personal API key."; },
+    describe: ({ garmin: g }) => ({
+      ready: g.configured, removable: g.source === "saved",
+      text: g.source === "saved" ? "A key is saved. Paste a new one to replace it."
+        : g.source === "env" ? "Using GARMIN_PERSONAL_API_KEY from the server. A key saved here replaces it." : "No key saved yet.",
+    }),
+  });
+  setupForm({
+    kind: "strava", btn: "st-setup-btn", form: "st-setup", msg: "st-setup-msg", clear: "st-app-clear",
+    collect: () => {
+      const id = $("st-client-id").value.trim(), secret = $("st-client-secret").value.trim();
+      return /^\d+$/.test(id) && secret ? { client_id: id, client_secret: secret } : "Enter the numeric Client ID and the Client Secret.";
+    },
+    describe: ({ strava: t }) => ({
+      ready: t.connected, removable: t.source === "saved",
+      text: !t.app_configured ? "No API application saved yet." : t.connected ? "Connected to Strava." : "API application saved. Connect Strava to finish.",
+    }),
+    paint: ({ strava: t }) => { const a = $("st-oauth"); a.hidden = !t.app_configured; a.textContent = t.connected ? "Reconnect Strava" : "Connect Strava"; },
+  });
+})();
+</script>
+<script>
+(function () {
   const SERVER = "Strava";
   const WEEKS_SHOWN = 16;
   const CACHE = { staleTime: 15 * 60 * 1000, gcTime: 7 * 24 * 60 * 60 * 1000 };
@@ -2124,11 +2179,10 @@ window.FIGURES = (function () {
 </script>
 <script>
 (function () {
-  // Garmin: live from the local Garmin Connect MCP server (Claude desktop app on the PC that runs it),
-  // otherwise the last snapshot saved with the page (garmin/latest), refreshed each morning by a scheduled Claude task.
-  const HOST = "host:Garmin_Connect";
+  // Garmin (Stats tab): Garmin's official Connect Personal API, read by the self-hosted server with the owner's
+  // Personal API key (entered under "Garmin API setup"). The last answer is saved as garmin/latest so every device
+  // shows it straight away; the server also refreshes that snapshot each morning.
   const DOC = "garmin/latest";
-  const CACHE = { staleTime: 10 * 60 * 1000, gcTime: 24 * 60 * 60 * 1000 };
   // Validated categorical order on the dark card surface; awake is a neutral off-state.
   const STAGES = [
     { key: "deep", label: "Deep", color: "#5F86E8" },
@@ -2136,7 +2190,7 @@ window.FIGURES = (function () {
     { key: "rem", label: "REM", color: "#E8681F" },
     { key: "awake", label: "Awake", color: "#6B7178" },
   ];
-  const GOOD = "#2BB673", MID = "#FF8A1F", LOW = "#E5484D";
+  const GOOD = "#2BB673";
 
   const $ = (id) => document.getElementById(id);
   function h(tag, attrs, ...children) {
@@ -2164,11 +2218,6 @@ window.FIGURES = (function () {
   const hm = (sec) => { if (sec == null) return "–"; const m = Math.round(sec / 60); return `${Math.floor(m / 60)}h ${pad(m % 60)}m`; };
   const num = (v, d = 0) => (v == null || isNaN(v) ? "–" : Number(v).toFixed(d));
   const words = (s) => { if (!s) return ""; const t = String(s).replace(/_\d+$/, "").toLowerCase().replace(/_/g, " "); return t.charAt(0).toUpperCase() + t.slice(1); };
-  const PHRASES = {
-    AEROBIC_LOW_SHORTAGE: "Short on low aerobic", AEROBIC_HIGH_SHORTAGE: "Short on high aerobic", ANAEROBIC_SHORTAGE: "Short on anaerobic",
-    AEROBIC_LOW_FOCUS: "Low aerobic focus", AEROBIC_HIGH_FOCUS: "High aerobic focus", ANAEROBIC_FOCUS: "Anaerobic focus", BALANCED: "Balanced",
-  };
-  const phrase = (s) => PHRASES[s] || words(s);
   const fmtTime = (d) => d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   function fmtWhen(ms) {
     const d = new Date(ms), now = new Date();
@@ -2176,29 +2225,21 @@ window.FIGURES = (function () {
     if (ymd(d) === ymd(addDays(now, -1))) return `yesterday ${fmtTime(d)}`;
     return `${d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} ${fmtTime(d)}`;
   }
-  const localTs = (s) => (s ? new Date(String(s).replace(" ", "T")) : null); // Garmin local timestamps carry no zone
   const dayShort = (s) => fromYmd(s).toLocaleDateString(undefined, { weekday: "short" });
   const dayLong = (s) => fromYmd(s).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
-  const pctColor = (p) => (p >= 67 ? GOOD : p >= 34 ? MID : LOW);
-  const levelClass = (l) => ({ PRIME: "is-good", HIGH: "is-good", MODERATE: "is-warn", LOW: "is-bad", POOR: "is-bad" }[l] || "");
-  const acwrClass = (s) => ({ OPTIMAL: "is-good", HIGH: "is-warn", VERY_HIGH: "is-bad" }[s] || "");
 
   // ---------- what to fetch ----------
   function plan(date) {
     const t = fromYmd(date);
     return {
       summary: ["get_user_summary", { date }],
-      readiness: ["get_training_readiness", { date }],
       hrv: ["get_hrv_data", { date }],
       sleep: ["get_sleep_summary_range", { start_date: ymd(addDays(t, -6)), end_date: date }],
-      status: ["get_training_status", { date }],
-      focus: ["get_training_load_balance", { date }],
-      vo2: ["get_vo2max_trend", { start_date: ymd(addDays(t, -55)), end_date: date }],
       im: ["get_weekly_intensity_minutes", { end_date: date, weeks: 4 }],
     };
   }
 
-  // ---------- normalise raw tool payloads ----------
+  // ---------- normalise raw payloads ----------
   const obj = (v) => (v && typeof v === "object" ? v : null);
   function normalise(raw) {
     const S = {};
@@ -2208,47 +2249,13 @@ window.FIGURES = (function () {
       stress: sm.averageStressLevel, bbNow: sm.bodyBatteryMostRecentValue, bbHigh: sm.bodyBatteryHighestValue,
       bbLow: sm.bodyBatteryLowestValue, bbWake: sm.bodyBatteryAtWakeTime, imMod: sm.moderateIntensityMinutes, imVig: sm.vigorousIntensityMinutes,
     };
-    const rd = Array.isArray(raw.readiness) ? raw.readiness : obj(raw.readiness) ? [raw.readiness] : [];
-    const byTime = rd.filter((x) => x && x.score != null).sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
-    if (byTime.length) {
-      const now = byTime[0], wake = byTime.find((x) => x.context === "AFTER_WAKEUP_RESET");
-      S.ready = {
-        score: now.score, level: now.level, feedback: now.feedback, at: now.timestamp, recovery: now.recovery_time_hours,
-        wake: wake && wake !== now ? wake.score : null,
-        factors: [
-          ["Sleep", now.sleep_factor_percent, now.sleep_factor_feedback],
-          ["Recovery time", now.recovery_factor_percent, now.recovery_factor_feedback],
-          ["HRV status", now.hrv_factor_percent, now.hrv_factor_feedback],
-          ["Acute load", now.training_load_factor_percent, now.training_load_feedback],
-          ["Sleep history", now.sleep_history_factor_percent, now.sleep_history_feedback],
-          ["Stress history", now.stress_history_factor_percent, now.stress_history_feedback],
-        ].filter((f) => f[1] != null),
-      };
-    }
     const hv = obj(raw.hrv);
     if (hv && hv.last_night_avg_hrv_ms != null) S.hrv = { last: hv.last_night_avg_hrv_ms, week: hv.weekly_avg_hrv_ms, low: hv.baseline_balanced_low_ms, high: hv.baseline_balanced_upper_ms, status: hv.status };
     const nights = obj(raw.sleep) && raw.sleep.nights;
     if (Array.isArray(nights)) S.sleep = nights.filter((n) => n && n.date).map((n) => ({
       date: n.date, score: n.sleep_score, asleep: n.sleep_seconds, deep: n.deep_sleep_seconds || 0, light: n.light_sleep_seconds || 0,
-      rem: n.rem_sleep_seconds || 0, awake: n.awake_seconds || 0, hrv: n.avg_overnight_hrv, rhr: n.resting_heart_rate_bpm,
+      rem: n.rem_sleep_seconds || 0, awake: n.awake_seconds || 0, hrv: n.avg_overnight_hrv,
     })).sort((a, b) => a.date.localeCompare(b.date)).slice(-7);
-    const st = obj(raw.status);
-    if (st && (st.training_status_feedback || st.acute_load != null)) S.status = {
-      feedback: st.training_status_feedback, acute: st.acute_load, chronic: st.chronic_load, ratio: st.load_ratio, acwr: st.acwr_status,
-      optMin: st.optimal_chronic_load_min, optMax: st.optimal_chronic_load_max,
-      vo2Run: st.vo2_max_precise ?? st.vo2_max, vo2Bike: st.cycling_vo2_max_precise ?? st.cycling_vo2_max, device: st.reporting_device_name,
-    };
-    const fc = obj(raw.focus);
-    if (fc && fc.aerobic_low) S.focus = {
-      feedback: fc.feedback,
-      bands: [["Low aerobic", fc.aerobic_low], ["High aerobic", fc.aerobic_high], ["Anaerobic", fc.anaerobic]]
-        .filter((b) => obj(b[1])).map(([label, b]) => ({ label, load: b.load, min: b.target_min, max: b.target_max, status: b.status })),
-    };
-    const vo = obj(raw.vo2);
-    if (vo && Array.isArray(vo.trend) && vo.trend.length) S.vo2 = {
-      sport: vo.sport, first: vo.first_vo2_max, latest: vo.latest_vo2_max, change: vo.change,
-      points: vo.trend.filter((p) => p && p.vo2_max != null).map((p) => ({ date: p.date, v: p.vo2_max, measured: !p.carried_forward })),
-    };
     const im = obj(raw.im) && raw.im.weekly_data;
     if (Array.isArray(im)) S.im = im.filter((w) => w && w.week_start).map((w) => ({ week: w.week_start, total: w.total_minutes || 0, mod: w.moderate_minutes || 0, vig: w.vigorous_minutes || 0, goal: w.weekly_goal || 150 }))
       .sort((a, b) => a.week.localeCompare(b.week)).slice(-5);
@@ -2273,69 +2280,13 @@ window.FIGURES = (function () {
   const row = (label, track, val) => h("li", { class: "gm-row" }, h("span", { class: "gm-row-label" }, label), track, h("span", { class: "gm-row-val" }, val));
 
   function renderTiles(S) {
-    const r = S.ready, v = S.hrv, d = S.day || {};
+    const v = S.hrv, d = S.day || {}, last = (S.sleep || []).slice(-1)[0];
     $("gm-tiles").replaceChildren(
-      tile("Readiness", r ? r.score : null, "/100", r ? `${words(r.level)}${r.recovery != null ? ` · ${num(r.recovery)} h recovery` : ""}` : ""),
+      tile("Sleep score", last && last.date === current.date ? last.score ?? null : null, "/100", last ? `${hm(last.asleep)} asleep` : ""),
       tile("Overnight HRV", v ? v.last : null, "ms", v ? `${words(v.status)} · 7-day ${num(v.week)} ms` : ""),
       tile("Resting HR", d.rhr ?? null, "bpm", d.rhr7 != null ? `7-day average ${d.rhr7}` : ""),
       tile("Body battery", d.bbNow ?? null, "", d.bbWake != null ? `Woke at ${d.bbWake} · low ${num(d.bbLow)}` : ""),
     );
-  }
-
-  function renderReady(S) {
-    const box = $("gm-ready"), pill = $("gm-ready-pill"), r = S.ready;
-    pill.textContent = r ? words(r.level) : ""; pill.className = "gm-pill " + (r ? levelClass(r.level) : "");
-    if (!r) { box.replaceChildren(missing("No training readiness from Garmin today.")); return; }
-    const at = localTs(r.at);
-    const say = h("p", { class: "gm-say" }, h("strong", {}, words(r.feedback) || "Readiness"), ". ",
-      r.recovery != null ? `${num(r.recovery)} h of recovery left` : "", at && !isNaN(at) ? ` as of ${fmtTime(at)}` : "", ".",
-      r.wake != null ? ` Score on waking: ${r.wake}.` : "");
-    const list = h("ul", { class: "gm-rows", "aria-label": "What's driving readiness" },
-      r.factors.map(([label, p, fb]) => row(label, bar(p, pctColor(p)), `${p}% · ${words(fb)}`)));
-    box.replaceChildren(say, h("p", { class: "gm-sub" }, "What's driving it"), list);
-  }
-
-  function spark(vo2, width) {
-    const pts = vo2.points;
-    const W = Math.max(160, width), H = 54, m = { l: 4, r: 4, t: 8, b: 8 };
-    const vals = pts.map((p) => p.v), lo = Math.min(...vals) - 0.3, hi = Math.max(...vals) + 0.3;
-    const x = (i) => m.l + (W - m.l - m.r) * (pts.length === 1 ? 0.5 : i / (pts.length - 1));
-    const y = (v) => m.t + (H - m.t - m.b) * (1 - (v - lo) / (hi - lo || 1));
-    const color = /cycl|bik/i.test(vo2.sport || "") ? "#E8681F" : "#20A491";
-    const svg = svgEl("svg", { class: "gm-spark", width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img",
-      "aria-label": `${words(vo2.sport) || "VO2"} VO2 max over 8 weeks, from ${num(vo2.first, 1)} to ${num(vo2.latest, 1)}` });
-    svg.append(svgEl("path", { d: pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(""), fill: "none", stroke: color, "stroke-width": 2, "stroke-linejoin": "round" }));
-    pts.forEach((p, i) => {
-      if (!p.measured && i !== pts.length - 1) return;
-      const c = svgEl("circle", { cx: x(i), cy: y(p.v), r: 4, fill: color, stroke: "#1F2124", "stroke-width": 2 });
-      c.append(svgEl("title", {}, `${dayLong(p.date)}: ${num(p.v, 1)}`));
-      svg.append(c);
-    });
-    return svg;
-  }
-
-  function renderTrain(S) {
-    const box = $("gm-train"), pill = $("gm-status-pill"), s = S.status;
-    pill.textContent = s && s.acwr ? `Load ${words(s.acwr).toLowerCase()}` : ""; pill.className = "gm-pill " + (s ? acwrClass(s.acwr) : "");
-    if (!s) { box.replaceChildren(missing("No training status from Garmin today.")); return; }
-    const parts = [
-      h("p", { class: "gm-say" }, h("strong", {}, words(s.feedback) || "Training status"),
-        s.ratio != null ? `. Acute load ${num(s.acute)} vs chronic ${num(s.chronic)}, a ratio of ${num(s.ratio, 1)}.` : "."),
-      h("div", { class: "gm-kv" },
-        h("div", {}, h("span", {}, "Acute load"), h("strong", {}, num(s.acute)), h("small", {}, "last 7 days")),
-        h("div", {}, h("span", {}, "Chronic"), h("strong", {}, num(s.chronic)), h("small", {}, s.optMin != null ? `aim ${num(s.optMin)}–${num(s.optMax)}` : "4-week")),
-        h("div", {}, h("span", {}, "Ratio"), h("strong", {}, num(s.ratio, 1)), h("small", {}, words(s.acwr) || "acute ÷ chronic"))),
-      h("p", { class: "gm-sub" }, "VO2 max"),
-      h("div", { class: "gm-kv" },
-        h("div", {}, h("span", {}, "Run"), h("strong", {}, num(s.vo2Run, 1)), h("small", {}, "ml/kg/min")),
-        h("div", {}, h("span", {}, "Bike"), h("strong", {}, num(s.vo2Bike, 1)), h("small", {}, "ml/kg/min")),
-        h("div", {}, h("span", {}, "8 weeks"), h("strong", {}, S.vo2 && S.vo2.change != null ? `${S.vo2.change > 0 ? "+" : ""}${num(S.vo2.change, 1)}` : "–"), h("small", {}, S.vo2 ? words(S.vo2.sport) : ""))),
-    ];
-    box.replaceChildren(...parts);
-    if (S.vo2 && S.vo2.points.length > 1) {
-      box.append(spark(S.vo2, box.clientWidth || 300),
-        h("p", { class: "st-note" }, `${words(S.vo2.sport)} VO2 max, last 8 weeks: ${num(S.vo2.first, 1)} → ${num(S.vo2.latest, 1)}. Dots mark days Garmin recalculated it.`));
-    }
   }
 
   function showTip(tip, wrap, cx, n) {
@@ -2395,18 +2346,6 @@ window.FIGURES = (function () {
     note.textContent = `Bar height is time in bed by stage; the number on top is Garmin's sleep score. ${N.length}-night average: ${hm(avgSleep)} asleep${avgScore != null ? `, score ${avgScore}` : ""}.`;
   }
 
-  function renderFocus(S) {
-    const box = $("gm-focus"), pill = $("gm-focus-pill"), f = S.focus;
-    pill.textContent = f ? phrase(f.feedback) : ""; pill.className = "gm-pill " + (f ? (f.feedback === "BALANCED" ? "is-good" : "is-warn") : "");
-    if (!f || !f.bands.length) { box.replaceChildren(missing("No load focus from Garmin today.")); return; }
-    const top = Math.max(...f.bands.map((b) => Math.max(b.load || 0, b.max || 0))) * 1.05 || 1;
-    const pc = (v) => ((v || 0) / top) * 100;
-    box.replaceChildren(
-      h("ul", { class: "gm-rows" }, f.bands.map((b) => row(b.label, bar(pc(b.load), b.status === "within" ? "#C9CDD2" : MID, [pc(b.min), pc(b.max)]),
-        `${num(b.load)} · ${b.status === "within" ? "on target" : b.status || ""}`))),
-      h("p", { class: "st-note" }, "Shaded area is Garmin's target range for each intensity band over the last 4 weeks."));
-  }
-
   function renderDay(S) {
     const box = $("gm-day"), d = S.day, weeks = S.im || [];
     const parts = [];
@@ -2439,7 +2378,7 @@ window.FIGURES = (function () {
     chip.textContent = current.source === "live" ? "Live" : current.date !== today ? "Saved · older" : "Saved";
     const when = fmtWhen(current.fetchedAt);
     setStatus(current.source === "live"
-      ? `From Garmin Connect on this PC · ${when}${current.partial ? ` · ${current.partial} item${current.partial > 1 ? "s" : ""} couldn't load` : ""}`
+      ? `From the Garmin Personal API · ${when}${current.partial ? ` · ${current.partial} item${current.partial > 1 ? "s" : ""} couldn't load` : ""}`
       : `Snapshot saved ${when}${current.savedBy === "scheduled" ? " by the morning refresh" : ""}${current.date !== today ? ` (Garmin data for ${dayLong(current.date)})` : ""}`, current.date !== today);
   }
   function render() {
@@ -2447,41 +2386,33 @@ window.FIGURES = (function () {
     $("gm-body").hidden = false;
     renderSource();
     const S = current.S;
-    renderTiles(S); renderReady(S); renderTrain(S); renderSleep(S); renderFocus(S); renderDay(S);
+    renderTiles(S); renderSleep(S); renderDay(S);
   }
 
-  // ---------- live + saved ----------
-  let db = null, user = null, mcp = null, perms = null, saved = null, busy = false, hostReady = false;
-  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  // ---------- live (self-hosted server) + saved snapshot ----------
+  let db = null, user = null, saved = null, busy = false, live = false;
   async function callOne(tool, input, refresh) {
-    const opts = { cache: refresh ? { ...CACHE, refresh: true } : CACHE };
-    try {
-      return await mcp.callTool(HOST, tool, input, opts);
-    } catch (e) {
-      if (!(e && e.retryable)) throw e;
-      await wait(Math.min(e.retryAfterMs || 1500 + Math.random() * 1500, 10000));
-      return await mcp.callTool(HOST, tool, input, opts);
-    }
+    const r = await fetch(`/api/garmin/${tool}`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ input, refresh }) });
+    const data = await r.json().catch(() => ({ error: { code: "server_unavailable" } }));
+    if (data.error) throw data.error;
+    return data;
   }
   function errorCopy(e) {
     switch (e && e.code) {
-      case "server_not_connected": return "Garmin Connect isn't reachable here. Live data works in the Claude desktop app on the PC that runs the Garmin server.";
-      case "cancelled": return "The Garmin request was declined in the Claude app.";
-      case "not_in_manifest": case "approval_required": case "consent_required": return "This page isn't allowed to use Garmin Connect yet. Allow it from the page's Permissions menu.";
-      case "blocked_by_policy": return "Your organization doesn't allow this page to use Garmin Connect.";
-      case "tool_error": return `Garmin Connect reported an error: ${e.message || "no details"}.`;
-      case "server_unavailable": case "rate_limited": case "upstream_error": return "Garmin Connect didn't respond. Try Refresh in a minute.";
-      default: return "Couldn't load live data from Garmin Connect. Try Refresh.";
+      case "server_not_connected": return "Garmin isn't set up yet. Open Garmin API setup and enter your Personal API key.";
+      case "needs_reauth": return `${e.message || "Garmin didn't accept the Personal API key."}`;
+      case "rate_limited": case "server_unavailable": case "upstream_error": return "Garmin didn't respond. Try Refresh in a minute.";
+      default: return "Couldn't load live data from Garmin. Try Refresh.";
     }
   }
   function setBusy(on) {
     busy = on;
-    $("gm-live").disabled = on; $("gm-refresh").disabled = on;
+    $("gm-refresh").disabled = on;
     $("gm-body").classList.toggle("is-loading", on);
-    if (on) setStatus("Loading from Garmin Connect…", false);
+    if (on) setStatus("Loading from Garmin…", false);
   }
   async function loadLive(refresh) {
-    if (busy || !mcp) return;
+    if (busy || !live) return;
     setBusy(true);
     const date = ymd(new Date()), p = plan(date), keys = Object.keys(p);
     const results = await Promise.allSettled(keys.map((k) => callOne(p[k][0], p[k][1], refresh)));
@@ -2491,30 +2422,22 @@ window.FIGURES = (function () {
     results.forEach((r, i) => {
       if (r.status === "fulfilled") {
         raw[keys[i]] = r.value.payload;
-        if (r.value.cache && r.value.cache.storedAt) fetchedAt = Math.min(fetchedAt, r.value.cache.storedAt);
+        if (r.value.storedAt) fetchedAt = Math.min(fetchedAt, r.value.storedAt);
       } else errs.push(r.reason);
     });
     if (!Object.keys(raw).length) {
-      const e = errs[0];
-      if (e && e.code === "server_not_connected") { $("gm-live").hidden = true; $("gm-refresh").hidden = true; }
-      if (current) { renderSource(); setStatus(`${errorCopy(e)} Showing the saved snapshot.`, true); }
-      else setStatus(errorCopy(e), true);
+      if (current) { renderSource(); setStatus(`${errorCopy(errs[0])} Showing the saved snapshot.`, true); }
+      else setStatus(errorCopy(errs[0]), true);
       return;
     }
-    let filled = 0;
-    if (saved && saved.date === date && saved.raw) for (const k of keys) if (!(k in raw) && saved.raw[k] != null) { raw[k] = saved.raw[k]; filled++; }
-    current = { S: normalise(raw), fetchedAt, source: "live", date, partial: errs.length - filled };
-    $("gm-live").hidden = true; $("gm-refresh").hidden = false;
+    current = { S: normalise(raw), fetchedAt, source: "live", date, partial: errs.length };
+    $("gm-refresh").hidden = false;
     render();
-    if (errs.length === 0 || filled === errs.length) save(raw, date, fetchedAt);
+    if (!errs.length) save(raw, date, fetchedAt);
   }
   async function save(raw, date, fetchedAt) {
-    if (!db || !user) return;
-    let can = null;
-    try { can = await user.canEdit(); } catch (e) {}
-    if (can === false) return;
-    if (saved && saved.fetchedAt >= fetchedAt) return;
-    try { await db.doc(DOC).set({ v: 1, date, fetchedAt, source: "live", raw }); } catch (e) {}
+    if (!db || (saved && saved.fetchedAt >= fetchedAt)) return;
+    try { await db.doc(DOC).set({ v: 2, date, fetchedAt, source: "live", raw }); } catch (e) {}
   }
   function watchSaved() {
     db.doc(DOC).onSnapshot((snap) => {
@@ -2527,110 +2450,28 @@ window.FIGURES = (function () {
     }, () => {});
   }
 
-  $("gm-live").onclick = () => loadLive(false);
   $("gm-refresh").onclick = () => loadLive(true);
 
-  const gmModal = $("gm-modal");
-  const gmMsg = $("gm-config-msg");
-  if ($("gm-config-btn") && gmModal) {
-    $("gm-config-btn").onclick = () => {
-      fetch("/api/garmin/status").then(r => r.json()).then(st => {
-        if (st.hasApiKey) {
-          $("gm-key-input").placeholder = "Personal API Key configured (paste new key to update)";
-        }
-      }).catch(() => {});
-      if (gmMsg) gmMsg.style.display = "none";
-      gmModal.showModal();
-    };
-  }
-  if ($("gm-modal-close") && gmModal) $("gm-modal-close").onclick = () => gmModal.close();
-  if ($("gm-modal-cancel") && gmModal) $("gm-modal-cancel").onclick = () => gmModal.close();
-  if ($("gm-modal-save") && gmModal) {
-    $("gm-modal-save").onclick = async () => {
-      const key = $("gm-key-input").value.trim();
-      if (!key) {
-        if (gmMsg) {
-          gmMsg.textContent = "Please enter your Garmin Personal API Key.";
-          gmMsg.style.display = "block";
-          gmMsg.style.background = "rgba(229,72,77,0.2)";
-          gmMsg.style.color = "#FF8080";
-        }
-        return;
-      }
-      $("gm-modal-save").disabled = true;
-      $("gm-modal-save").textContent = "Connecting…";
-      if (gmMsg) gmMsg.style.display = "none";
-      try {
-        const res = await fetch("/api/garmin/configure", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ apiKey: key })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          if (gmMsg) {
-            gmMsg.textContent = "Connected successfully! Fetching live Garmin data…";
-            gmMsg.style.display = "block";
-            gmMsg.style.background = "rgba(43,182,115,0.2)";
-            gmMsg.style.color = "#4ADE80";
-          }
-          setTimeout(() => {
-            gmModal.close();
-            loadLive(true);
-          }, 900);
-        } else {
-          if (gmMsg) {
-            gmMsg.textContent = data.error || "Connection failed. Please check your Personal API key.";
-            gmMsg.style.display = "block";
-            gmMsg.style.background = "rgba(229,72,77,0.2)";
-            gmMsg.style.color = "#FF8080";
-          }
-        }
-      } catch (err) {
-        if (gmMsg) {
-          gmMsg.textContent = "Network error while connecting to Garmin API.";
-          gmMsg.style.display = "block";
-          gmMsg.style.background = "rgba(229,72,77,0.2)";
-          gmMsg.style.color = "#FF8080";
-        }
-      } finally {
-        $("gm-modal-save").disabled = false;
-        $("gm-modal-save").textContent = "Save & Connect";
-      }
-    };
-  }
-
   let rz;
-  window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (current) { renderTrain(current.S); renderSleep(current.S); } }, 120); });
+  window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (current) renderSleep(current.S); }, 120); });
 
   // Garmin is only loaded once the Stats tab is first opened.
   let started = false;
   (window.__statsHooks = window.__statsHooks || []).push(() => { if (!started) { started = true; start(); } });
   async function start() {
     const use = (n) => Promise.resolve(window.claude?.use?.(n) ?? null).catch(() => null);
-    [db, user, mcp, perms] = await Promise.all([use("db"), use("user"), use("mcp"), use("permissions")]);
+    [db, user] = await Promise.all([use("db"), use("user")]);
     // Health data is kept to the plan's owner and editors: the saved snapshot isn't readable by anyone else.
     let owner = true;
     try { if (user) owner = (await user.canEdit()) !== false; } catch (e) {}
     if (!owner) { setStatus("Garmin data is private to the plan's owner.", false); return; }
     if (db) watchSaved();
-    setTimeout(() => {
-      if (current || busy) return;
-      if (!db && !mcp) setStatus("Garmin data shows when this page is open on claude.ai.", false);
-      else if (hostReady) setStatus("No Garmin snapshot saved yet. Use Get live data to pull today's numbers.", false);
-      else setStatus("No Garmin snapshot saved yet. It's refreshed each morning from the PC that runs Garmin Connect.", false);
-    }, 10000);
-    if (!mcp) return;
-    let listed = false;
-    try { const r = await mcp.listTools(HOST); listed = (r.servers || []).some((s) => s.server === HOST); } catch (e) {}
-    if (!listed) return; // not in the Claude desktop app with Garmin Connect running
-    hostReady = true;
-    const st = perms ? await perms.state(`mcp:${HOST}`).catch(() => "unavailable") : "prompt";
-    if (st === "unavailable") return;
-    if (st === "granted") { loadLive(false); return; }
-    if (st === "denied") { if (!current) setStatus("Garmin access was declined for this page. Allow it from the page's Permissions menu.", true); return; }
-    $("gm-live").hidden = false;
-    if (!current) setStatus("Get today's numbers straight from Garmin Connect on this PC. Claude will ask you to allow it first.", false);
+    const K = window.kcfIntegrations, s = K ? await K.status : null;
+    if (!s) { if (!current) setStatus("Live Garmin data needs the self-hosted KerrChow Fit server (see DOCKER.md).", false); return; }
+    live = true;
+    K.onChange((kind, st) => { if (kind === "garmin" && st.garmin.configured) loadLive(true); });
+    if (s.garmin.configured) loadLive(false);
+    else if (!current) setStatus("Garmin isn't set up yet. Enter your Personal API key under Garmin API setup.", false);
   }
 })();
 </script>

@@ -1,6 +1,6 @@
 /* KerrChow Fit, self-hosted: stands in for the claude.ai runtime (window.claude) so index.html runs unchanged.
  * db          -> /api/db/*   (SQLite on the server; polled for changes so phone and desktop stay in sync)
- * mcp         -> /api/mcp/*  (Strava and Garmin answered by the server)
+ * mcp         -> /api/mcp/*  (Strava, answered by the server from the Strava API)
  * user        -> one owner who can edit (protect the site with the stack's login or your network)
  * permissions -> always granted
  */
